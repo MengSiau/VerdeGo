@@ -1,5 +1,17 @@
 # VerdeGo
-CS FYP 2026
+
+## CS FYP 2026 - Group CS_08
+
+### Group members
+
+| Member         | Email                      |
+| --------------  --------------------------- |
+| **Meng Siau**  | hsia0003@student.monash.edu |
+|                |                        |
+|                | xxx@student.monash.edu |
+| **      **     | xxx@student.monash.edu |
+| **       **    | xxx@student.monash.edu |
+
 
 A React Native app built with [Expo SDK 54](https://expo.dev) and [Expo Router](https://docs.expo.dev/router/introduction/).
 
