@@ -7,7 +7,7 @@
 | Member         | Email                        |
 | -------------- | ----------------------------- |
 | **Meng Siau**  | hsia0003@student.monash.edu   |
-|                | xxx@student.monash.edu        |
+|**Ayush Sharma**| asha0300@student.monash.edu   |
 |                | xxx@student.monash.edu        |
 |                | xxx@student.monash.edu        |
 |                | xxx@student.monash.edu        |
