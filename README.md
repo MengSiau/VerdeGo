@@ -9,7 +9,7 @@
 | **Meng Siau**    | hsia0003@student.monash.edu |
 | **Ayush Sharma** | asha0300@student.monash.edu |
 | **Tye Samuels**  | tsam0016@student.monash.edu |
-|                  | xxx@student.monash.edu      |
+| **Kloe Lashkariov-Lee** | klas0001@student.monash.edu      |
 |                  | xxx@student.monash.edu      |
 
 
