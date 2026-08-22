@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +12,8 @@ import { SplashSecondaryButton } from './SplashSecondaryButton';
 
 export function LoginSplash() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  const goToSignIn = () => router.push('/login-signin'); // Routes based on the filename structure in the app directory!
 
   return (
     <View style={styles.fill}>
@@ -34,9 +37,9 @@ export function LoginSplash() {
         </View>
 
         <View style={[styles.actions, { paddingBottom: insets.bottom + 20 }]}>
-          <SplashPrimaryButton label="Get Started" />
+          <SplashPrimaryButton label="Get Started" onPress={goToSignIn} />
           <View style={styles.actionGap} />
-          <SplashSecondaryButton label="Sign In" />
+          <SplashSecondaryButton label="Sign In" onPress={goToSignIn} />
         </View>
       </LinearGradient>
     </View>
@@ -51,7 +54,7 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
-    paddingHorizontal: screenPaddingX,
+    paddingHorizontal: screenPaddingX.auth,
   },
   title: {
     marginTop: 24,
@@ -77,7 +80,7 @@ const styles = StyleSheet.create({
     maxWidth: 280,
   },
   actions: {
-    paddingHorizontal: screenPaddingX,
+    paddingHorizontal: screenPaddingX.auth,
   },
   actionGap: {
     height: 12,

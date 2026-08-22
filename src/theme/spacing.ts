@@ -9,7 +9,11 @@ export const radius = {
   lg: 8,
 } as const;
 
-export const screenPaddingX = 24;
+// px-5 (20px) is standard; px-6 (24px) is used on auth/simple-form screens (Login, Verify, Report).
+export const screenPaddingX = {
+  standard: 20,
+  auth: 24,
+} as const;
 
 // Minimum 44x44px tap targets is a hard WCAG 2.2 AA rule for this app.
 export const tapTarget = {
