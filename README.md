@@ -33,7 +33,16 @@ A React Native app built with [Expo SDK 54](https://expo.dev) and [Expo Router](
 
 ## Project structure
 
-- `app/` — screens and routes (file-based routing via Expo Router)
-- `components/` — shared UI components
-- `constants/` — shared constants (colors, etc.)
+- `app/` — routes (file-based routing via Expo Router); each file here is thin and just renders a screen from `src/screens/`
+- `src/screens/` — screen implementations, one folder per screen
+- `src/components/` — shared UI components reused across screens
+- `src/theme/` — design tokens (colors, typography, spacing), sourced from `design-system.json`
 - `assets/` — images, fonts, and other static assets
+
+## Branching
+
+- `main` — production. Always deployable.
+- `dev` — testing/integration branch. Feature branches merge into `dev` first; once verified, `dev` is merged into `main`.
+- `feature/*` — individual feature work, branched off `dev` and merged back into `dev` via PR.
+
+`main` and `dev` currently point to the same commit while the project is just getting started.
