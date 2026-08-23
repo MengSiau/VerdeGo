@@ -1,4 +1,5 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +12,10 @@ import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/them
 
 export function LoginSignIn() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
+  // Demo shortcut: every "Continue with Monash" goes to profile setup until
+  // account-lookup/verification exists to branch between Home and Set-Up Profile.
+  const goToSetUpProfile = () => router.push('/login-setupprofile');
 
   return (
     <View style={styles.fill}>
@@ -51,7 +56,7 @@ export function LoginSignIn() {
         </View>
 
         <View style={styles.fieldGroup}>
-          <PrimaryButton label="Continue with Monash" />
+          <PrimaryButton label="Continue with Monash" onPress={goToSetUpProfile} />
         </View>
 
         <View style={styles.divider}>
