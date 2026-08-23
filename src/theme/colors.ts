@@ -39,6 +39,18 @@ export const colors = {
   },
 } as const;
 
+// Each user avatar is assigned one bg+text pair from this list (Tailwind 100/700 pairs).
+export const avatarPalettes = [
+  { bg: '#f3e8ff', text: '#7e22ce' }, // purple
+  { bg: '#dbeafe', text: '#1d4ed8' }, // blue
+  { bg: '#fce7f3', text: '#be185d' }, // pink
+  { bg: '#ffedd5', text: '#c2410c' }, // orange
+  { bg: '#ccfbf1', text: '#0f766e' }, // teal
+  { bg: '#ffe4e6', text: '#be123c' }, // rose
+  { bg: '#e0e7ff', text: '#4338ca' }, // indigo
+  { bg: colors.brand.verde100, text: colors.brand.verde700 }, // green
+] as const;
+
 // Gradient color stops, for use with expo-linear-gradient's `colors` prop.
 export const gradients = {
   primaryCTA: [colors.brand.verde600, colors.brand.verde500] as const,
