@@ -10,7 +10,7 @@
 | **Ayush Sharma** | asha0300@student.monash.edu |
 | **Tye Samuels**  | tsam0016@student.monash.edu |
 | **Kloe Lashkariov-Lee** | klas0001@student.monash.edu      |
-|                  | xxx@student.monash.edu      |
+| **Samuel Tanaka Rainbow** | srai0011@student.monash.edu      |
 
 
 A React Native app built with [Expo SDK 54](https://expo.dev) and [Expo Router](https://docs.expo.dev/router/introduction/).
