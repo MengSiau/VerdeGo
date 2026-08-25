@@ -68,11 +68,10 @@ export function LoginSignIn() {
         />
 
         <Text style={styles.footerText}>
--          Don&apos;t have an account? <Text style={styles.footerLink}>Sign up</Text>
-+          Don&apos;t have an account?{' '}
-+          <Text style={styles.footerLink} onPress={() => router.push('/signup-email')}>
-+            Sign up
-+          </Text>
+
+          Don&apos;t have an account?{' '}
+          <Text style={styles.footerLink} onPress={() => router.push('/signup-email')}>
+            Sign up          </Text>
          </Text>
       </ScrollView>
     </View>

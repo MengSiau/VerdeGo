@@ -11,8 +11,8 @@ import { ProgressBar } from '@/src/components/ProgressBar';
 import { TextField } from '@/src/components/TextField';
 import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
 
-const TOTAL_STEPS = 3;
-const CURRENT_STEP = 3;
+const TOTAL_STEPS = 2;
+const CURRENT_STEP = 2;
 
 export function ProfileSetup() {
   const insets = useSafeAreaInsets();
@@ -60,7 +60,7 @@ export function ProfileSetup() {
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrap}>
             <View style={styles.avatarCircle}>
-              <Text style={styles.avatarInitials}>{initials || '?'}</Text>
+              <Text style={styles.avatarInitials}>{initials || ''}</Text>
             </View>
             <View style={styles.avatarBadge}>
               <Ionicons name="add" size={16} color={colors.neutral.white} />
@@ -72,7 +72,7 @@ export function ProfileSetup() {
         <View style={styles.fieldGroup}>
           <TextField
             label="First Name"
-            placeholder="Priya"
+            placeholder="First Name"
             autoComplete="given-name"
             value={firstName}
             onChangeText={setFirstName}
@@ -82,7 +82,7 @@ export function ProfileSetup() {
         <View style={styles.fieldGroup}>
           <TextField
             label="Last Name"
-            placeholder="Sharma"
+            placeholder="Last Name"
             autoComplete="family-name"
             value={lastName}
             onChangeText={setLastName}
@@ -92,7 +92,7 @@ export function ProfileSetup() {
         <View style={styles.fieldGroup}>
           <TextField
             label="Student/Staff ID"
-            placeholder="32156890"
+            placeholder="Student/Staff ID"
             keyboardType="number-pad"
             value={studentId}
             onChangeText={setStudentId}
