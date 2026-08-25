@@ -13,7 +13,8 @@ import { SplashSecondaryButton } from './SplashSecondaryButton';
 export function LoginSplash() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const goToSignIn = () => router.push('/login-signin'); // Routes based on the filename structure in the app directory!
+  const goToSignUp = () => router.push('/signup-email'); // New users: email verification -> profile setup flow
+  const goToSignIn = () => router.push('/login-signin'); // Returning users: existing email + password flow the app directory!
 
   return (
     <View style={styles.fill}>
@@ -37,7 +38,7 @@ export function LoginSplash() {
         </View>
 
         <View style={[styles.actions, { paddingBottom: insets.bottom + 20 }]}>
-          <SplashPrimaryButton label="Get Started" onPress={goToSignIn} />
+          <SplashPrimaryButton label="Get Started" onPress={goToSignUp} />
           <View style={styles.actionGap} />
           <SplashSecondaryButton label="Sign In" onPress={goToSignIn} />
         </View>

@@ -1,4 +1,5 @@
 import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
@@ -11,6 +12,7 @@ import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/them
 
 export function LoginSignIn() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     <View style={styles.fill}>
@@ -66,8 +68,12 @@ export function LoginSignIn() {
         />
 
         <Text style={styles.footerText}>
-          Don&apos;t have an account? <Text style={styles.footerLink}>Sign up</Text>
-        </Text>
+-          Don&apos;t have an account? <Text style={styles.footerLink}>Sign up</Text>
++          Don&apos;t have an account?{' '}
++          <Text style={styles.footerLink} onPress={() => router.push('/signup-email')}>
++            Sign up
++          </Text>
+         </Text>
       </ScrollView>
     </View>
   );
