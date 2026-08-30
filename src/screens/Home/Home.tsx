@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
@@ -7,7 +8,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/src/components/BottomNav';
 import { FilterChips } from '@/src/components/FilterChips';
-import { RideCard, type Ride } from '@/src/components/RideCard';
+import { RideCard } from '@/src/components/RideCard';
+import { DUMMY_RIDES } from '@/src/data/rides';
 import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
 
 type SortFilter = 'eco' | 'cost' | 'time';
@@ -18,60 +20,9 @@ const SORT_LABEL: Record<SortFilter, string> = {
   time: 'arrival time',
 };
 
-// Demo data standing in for a real rides feed until the backend exists.
-const DUMMY_RIDES: Ride[] = [
-  {
-    id: '1',
-    driverName: 'Priya Sharma',
-    rating: 5,
-    pickup: 'Glen Waverley Station',
-    destination: 'Monash Clayton',
-    departureTime: '8:15 AM',
-    seats: 2,
-    durationMinutes: 18,
-    price: 4.2,
-    co2SavedKg: 0.8,
-  },
-  {
-    id: '2',
-    driverName: 'James Chen',
-    rating: 4,
-    pickup: 'Clayton Station',
-    destination: 'Monash Clayton',
-    departureTime: '8:30 AM',
-    seats: 3,
-    durationMinutes: 8,
-    price: 2.5,
-    co2SavedKg: 0.4,
-  },
-  {
-    id: '3',
-    driverName: 'Mei Lin',
-    rating: 5,
-    pickup: 'Caulfield Station',
-    destination: 'Monash Clayton',
-    departureTime: '8:45 AM',
-    seats: 3,
-    durationMinutes: 22,
-    price: 5.8,
-    co2SavedKg: 1.1,
-  },
-  {
-    id: '4',
-    driverName: 'Arjun Patel',
-    rating: 4,
-    pickup: 'Huntingdale Station',
-    destination: 'Monash Clayton',
-    departureTime: '9:00 AM',
-    seats: 4,
-    durationMinutes: 15,
-    price: 3.1,
-    co2SavedKg: 0.9,
-  },
-];
-
 export function Home() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const [sort, setSort] = useState<SortFilter>('eco');
 
   const totalCo2Saved = useMemo(
@@ -118,7 +69,7 @@ export function Home() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}>
           {DUMMY_RIDES.map((ride) => (
-            <RideCard key={ride.id} ride={ride} />
+            <RideCard key={ride.id} ride={ride} onPress={() => router.push(`/ride-details/${ride.id}`)} />
           ))}
         </ScrollView>
       </View>

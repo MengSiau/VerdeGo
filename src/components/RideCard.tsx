@@ -1,27 +1,20 @@
 import { Ionicons } from '@expo/vector-icons';
-import { StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from 'react-native';
 
+import type { Ride } from '@/src/data/rides';
 import { colors, fontFamily, fontSize, radius } from '@/src/theme';
 
 import { Avatar } from './Avatar';
 import { Stars } from './Stars';
 
-export type Ride = {
-  id: string;
-  driverName: string;
-  rating: number;
-  pickup: string;
-  destination: string;
-  departureTime: string;
-  seats: number;
-  durationMinutes: number;
-  price: number;
-  co2SavedKg: number;
+type RideCardProps = {
+  ride: Ride;
+  onPress?: () => void;
 };
 
-export function RideCard({ ride }: { ride: Ride }) {
+export function RideCard({ ride, onPress }: RideCardProps) {
   return (
-    <View style={styles.card}>
+    <Pressable onPress={onPress} style={styles.card}>
       <View style={styles.topRow}>
         <Avatar name={ride.driverName} size={44} />
         <View style={styles.driverInfo}>
@@ -64,7 +57,7 @@ export function RideCard({ ride }: { ride: Ride }) {
         </View>
         <Text style={styles.co2Text}>{ride.co2SavedKg.toFixed(1)}kg CO2 saved</Text>
       </View>
-    </View>
+    </Pressable>
   );
 }
 
