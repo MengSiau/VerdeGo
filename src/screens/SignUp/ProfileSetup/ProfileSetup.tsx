@@ -33,8 +33,8 @@ export function ProfileSetup() {
   }, [firstName, lastName]);
 
   const handleComplete = () => {
-    // TODO: wire up to backend once auth is connected.
-    router.push('/');
+    // TODO: submit profile to backend once auth is connected.
+    router.push('/home');
   };
 
   return (
