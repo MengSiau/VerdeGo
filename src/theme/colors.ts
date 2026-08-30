@@ -39,6 +39,9 @@ export const colors = {
   },
 } as const;
 
+// Faux map pattern background used behind route/location placeholders (no real map integration yet).
+export const mapBg = '#e8f5e9';
+
 // Each user avatar is assigned one bg+text pair from this list (Tailwind 100/700 pairs).
 export const avatarPalettes = [
   { bg: '#f3e8ff', text: '#7e22ce' }, // purple
