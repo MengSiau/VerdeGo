@@ -22,6 +22,11 @@ export type Ride = {
   confirmedPassengers: Passenger[];
 };
 
+export type MyRideBooking = {
+  rideId: string;
+  dateLabel: string;
+};
+
 // Demo data standing in for a real rides feed/backend.
 export const DUMMY_RIDES: Ride[] = [
   {
@@ -97,3 +102,6 @@ export const DUMMY_RIDES: Ride[] = [
     confirmedPassengers: [],
   },
 ];
+
+// Demo data: rides the current (demo) user has confirmed - what appears in My Rides > Upcoming.
+export const MY_UPCOMING_RIDES: MyRideBooking[] = [{ rideId: '1', dateLabel: 'Tomorrow' }];
