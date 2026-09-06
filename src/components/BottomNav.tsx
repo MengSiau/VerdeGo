@@ -29,7 +29,7 @@ export function BottomNav({ active }: { active: BottomNavTab }) {
         isActive={active === 'myRides'}
         onPress={() => router.replace('/my-rides')}
       />
-      <Pressable style={styles.fab}>
+      <Pressable style={styles.fab} onPress={() => router.push('/post-location')}>
         <LinearGradient colors={gradients.postFabButton} style={styles.fabGradient}>
           <Ionicons name="add" size={22} color={colors.neutral.white} />
         </LinearGradient>
