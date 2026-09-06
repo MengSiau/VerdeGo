@@ -1,11 +1,12 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
 import { PrimaryButton } from '@/src/components/PrimaryButton';
+import { SecondaryButton } from '@/src/components/SecondaryButton';
 import { colors, fontFamily, fontSize, mapBg, radius, screenPaddingX } from '@/src/theme';
 
 import { calculateFinalFarePerPassenger, DEMO_DISTANCE_KM } from '../fareCalculator';
@@ -54,10 +55,37 @@ export function PostConfirm() {
     router.push('/home');
   };
 
+  const handleCancel = () => {
+    Alert.alert(
+      'Discard this ride?',
+      "This will discard everything you've entered and return you to the feed.",
+      [
+        { text: 'Keep Editing', style: 'cancel' },
+        {
+          text: 'Discard',
+          style: 'destructive',
+          // Leaving the (post-ride) route group entirely unmounts PostRideProvider,
+          // so the draft is naturally discarded - no explicit reset needed.
+          onPress: () => router.replace('/home'),
+        },
+      ]
+    );
+  };
+
   return (
     <View style={[styles.fill, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}>
       <StatusBar style="dark" />
-      <Text style={styles.title}>Review & Post</Text>
+      <View style={styles.header}>
+        <Pressable
+          onPress={() => router.back()}
+          hitSlop={8}
+          style={styles.backButton}
+          accessibilityLabel="Go back"
+          accessibilityRole="button">
+          <Ionicons name="chevron-back" size={24} color={colors.neutral.gray900} />
+        </Pressable>
+        <Text style={styles.title}>Review & Post</Text>
+      </View>
 
       <View style={styles.summaryCard}>
         {/* TODO: tapping this will open an expanded map view once real map integration exists. */}
@@ -115,6 +143,8 @@ export function PostConfirm() {
 
       <View style={styles.actions}>
         <PrimaryButton label="Post Ride" onPress={handlePostRide} />
+        <View style={styles.actionGap} />
+        <SecondaryButton variant="destructive" label="Cancel Ride" onPress={handleCancel} />
       </View>
     </View>
   );
@@ -134,6 +164,18 @@ const styles = StyleSheet.create({
     flex: 1,
     backgroundColor: colors.neutral.white,
     paddingHorizontal: screenPaddingX.standard,
+  },
+  header: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    marginLeft: -10,
+    alignItems: 'center',
+    justifyContent: 'center',
   },
   title: {
     fontFamily: fontFamily.headingBold,
@@ -244,5 +286,8 @@ const styles = StyleSheet.create({
   },
   actions: {
     marginTop: 16,
+  },
+  actionGap: {
+    height: 12,
   },
 });
