@@ -3,31 +3,36 @@ import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'r
 
 import { colors, fontFamily, fontSize, radius, tapTarget } from '@/src/theme';
 
+type SecondaryButtonVariant = 'default' | 'destructive' | 'accent';
+
 type SecondaryButtonProps = {
   label: string;
   icon?: ReactNode;
   onPress?: (event: GestureResponderEvent) => void;
-  /** 'destructive' = destructiveOutline token (border-red-200, text-red-500) - e.g. Decline, Cancel Ride. */
-  variant?: 'default' | 'destructive';
+  /**
+   * 'destructive' = destructiveOutline token (border-red-200, text-red-500) - e.g. Decline, Cancel Ride.
+   * 'accent' = green-outline action - e.g. Calculate Green Score.
+   */
+  variant?: SecondaryButtonVariant;
+};
+
+const VARIANT_STYLES: Record<SecondaryButtonVariant, { border: object; label: object }> = {
+  default: { border: { borderColor: colors.neutral.gray200 }, label: { color: colors.neutral.gray700 } },
+  destructive: { border: { borderColor: '#fecaca' }, label: { color: colors.semantic.danger } },
+  accent: { border: { borderColor: colors.brand.verde500 }, label: { color: colors.brand.verde700 } },
 };
 
 // Standard app-wide secondary/outline button: white bg, border-2, on a white/light screen.
 export function SecondaryButton({ label, icon, onPress, variant = 'default' }: SecondaryButtonProps) {
-  const isDestructive = variant === 'destructive';
+  const palette = VARIANT_STYLES[variant];
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [
-        styles.button,
-        isDestructive ? styles.buttonDestructive : styles.buttonDefault,
-        pressed && styles.pressed,
-      ]}>
+      style={({ pressed }) => [styles.button, palette.border, pressed && styles.pressed]}>
       <View style={styles.content}>
         {icon}
-        <Text style={[styles.label, isDestructive ? styles.labelDestructive : styles.labelDefault]}>
-          {label}
-        </Text>
+        <Text style={[styles.label, palette.label]}>{label}</Text>
       </View>
     </Pressable>
   );
@@ -42,12 +47,6 @@ const styles = StyleSheet.create({
     alignItems: 'center',
     justifyContent: 'center',
   },
-  buttonDefault: {
-    borderColor: colors.neutral.gray200,
-  },
-  buttonDestructive: {
-    borderColor: '#fecaca',
-  },
   pressed: {
     opacity: 0.7,
   },
@@ -59,11 +58,5 @@ const styles = StyleSheet.create({
   label: {
     fontFamily: fontFamily.headingSemibold,
     fontSize: fontSize.base,
-  },
-  labelDefault: {
-    color: colors.neutral.gray700,
-  },
-  labelDestructive: {
-    color: colors.semantic.danger,
   },
 });
