@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
+import { useRouter } from 'expo-router';
 import { useState, type ReactNode } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
@@ -59,6 +60,7 @@ function to12Hour(date: Date) {
 type TimeField = 'hour' | 'minute' | 'period';
 
 export function PostDatetime() {
+  const router = useRouter();
   const { draft, updateDraft } = usePostRideDraft();
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(DEFAULT_DAY_INDEX);
   const [focusedField, setFocusedField] = useState<TimeField | null>('minute');
@@ -221,9 +223,8 @@ export function PostDatetime() {
         <Text style={styles.seatsCaption}>{seats} passenger{seats === 1 ? '' : 's'}</Text>
       </View>
 
-      {/* TODO: navigate to /post-vehicle once that step is built. */}
       <View style={styles.actions}>
-        <PrimaryButton label="Next: Vehicle Info" />
+        <PrimaryButton label="Next: Vehicle Info" onPress={() => router.push('/post-vehicle')} />
       </View>
 
       {Platform.OS === 'ios' ? (

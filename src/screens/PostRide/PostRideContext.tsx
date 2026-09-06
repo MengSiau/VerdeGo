@@ -1,5 +1,14 @@
 import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
 
+export type FuelType = 'petrol' | 'diesel' | 'hybrid' | 'electric';
+export type GreenScoreGrade = 'A+' | 'A' | 'B' | 'C';
+
+export type GreenScoreResult = {
+  grade: GreenScoreGrade;
+  co2Per100km: number;
+  percentBelowAverage: number;
+};
+
 export type PostRideDraft = {
   pickup?: string;
   date?: string; // e.g. "Wed, Aug 13"
@@ -7,6 +16,11 @@ export type PostRideDraft = {
   minute?: string; // "15"
   period?: 'AM' | 'PM';
   seats?: number;
+  vehicleMake?: string;
+  vehicleModel?: string;
+  vehicleYear?: string;
+  fuelType?: FuelType;
+  greenScore?: GreenScoreResult;
 };
 
 type PostRideContextValue = {
