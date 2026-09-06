@@ -13,6 +13,9 @@ import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/them
 export function LoginSignIn() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  // Demo shortcut: Sign In implies an existing account, so go straight to Home
+  // until real account lookup/auth exists.
+  const goToHome = () => router.push('/home');
 
   return (
     <View style={styles.fill}>
@@ -53,7 +56,7 @@ export function LoginSignIn() {
         </View>
 
         <View style={styles.fieldGroup}>
-          <PrimaryButton label="Continue with Monash" />
+          <PrimaryButton label="Continue with Monash" onPress={goToHome} />
         </View>
 
         <View style={styles.divider}>

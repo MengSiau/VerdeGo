@@ -13,7 +13,7 @@
 |                  | xxx@student.monash.edu      |
 
 
-A React Native app built with [Expo SDK 54](https://expo.dev) and [Expo Router](https://docs.expo.dev/router/introduction/).
+A React Native app built with [Expo SDK 57](https://expo.dev) and [Expo Router](https://docs.expo.dev/router/introduction/).
 
 ## Getting started
 

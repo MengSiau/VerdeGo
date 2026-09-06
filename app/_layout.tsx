@@ -1,6 +1,5 @@
-import { DefaultTheme, ThemeProvider } from '@react-navigation/native';
 import { useFonts } from 'expo-font';
-import { Stack } from 'expo-router';
+import { DefaultTheme, Stack, ThemeProvider } from 'expo-router';
 import * as SplashScreen from 'expo-splash-screen';
 import { useEffect } from 'react';
 import 'react-native-reanimated';
@@ -12,6 +11,8 @@ import {
   Poppins_700Bold,
   Poppins_800ExtraBold,
 } from '@expo-google-fonts/poppins';
+
+import { RidesStoreProvider } from '@/src/data/RidesStore';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -49,7 +50,14 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }} />
+      <RidesStoreProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          {/* Top-level bottom-nav sections swap instantly rather than sliding in like a
+              deeper/nested screen - everything else keeps the default push animation. */}
+          <Stack.Screen name="home" options={{ animation: 'none' }} />
+          <Stack.Screen name="my-rides" options={{ animation: 'none' }} />
+        </Stack>
+      </RidesStoreProvider>
     </ThemeProvider>
   );
 }
