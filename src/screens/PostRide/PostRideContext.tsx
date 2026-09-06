@@ -1,7 +1,20 @@
-import { createContext, useContext, useMemo, useState, type ReactNode } from 'react';
+import {
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode
+} from "react";
 
-export type FuelType = 'petrol' | 'diesel' | 'hybrid' | 'electric';
-export type GreenScoreGrade = 'A+' | 'A' | 'B' | 'C';
+/*
+Usage: 
+Defines the context used to manage the state of the post ride draft across different screens in the Post Ride flow.
+The PostRideProvider wraps the entire post-a-ride flow, allowing the draft ride to survive navigation between steps without passing a growing pile of data through URL params.
+The usePostRideDraft hook is used to access the context and update the draft ride state across different screens in the Post Ride flow.
+*/
+
+export type FuelType = "petrol" | "diesel" | "hybrid" | "electric";
+export type GreenScoreGrade = "A+" | "A" | "B" | "C";
 
 export type GreenScoreResult = {
   grade: GreenScoreGrade;
@@ -14,13 +27,14 @@ export type PostRideDraft = {
   date?: string; // e.g. "Wed, Aug 13"
   hour?: string; // "08"
   minute?: string; // "15"
-  period?: 'AM' | 'PM';
+  period?: "AM" | "PM";
   seats?: number;
   vehicleMake?: string;
   vehicleModel?: string;
   vehicleYear?: string;
   fuelType?: FuelType;
   greenScore?: GreenScoreResult;
+  fareAdjustmentPercent?: number; // -20 to 20, driver's adjustment vs the calculated fare
 };
 
 type PostRideContextValue = {
@@ -36,12 +50,17 @@ export function PostRideProvider({ children }: { children: ReactNode }) {
   const value = useMemo(
     () => ({
       draft,
-      updateDraft: (patch: Partial<PostRideDraft>) => setDraft((prev) => ({ ...prev, ...patch })),
+      updateDraft: (patch: Partial<PostRideDraft>) =>
+        setDraft((prev) => ({ ...prev, ...patch }))
     }),
     [draft]
   );
 
-  return <PostRideContext.Provider value={value}>{children}</PostRideContext.Provider>;
+  return (
+    <PostRideContext.Provider value={value}>
+      {children}
+    </PostRideContext.Provider>
+  );
 }
 
 // Custom hook to access the PostRideContext. Throws an error if used outside of a PostRideProvider.
@@ -49,7 +68,7 @@ export function PostRideProvider({ children }: { children: ReactNode }) {
 export function usePostRideDraft() {
   const context = useContext(PostRideContext);
   if (!context) {
-    throw new Error('usePostRideDraft must be used within a PostRideProvider');
+    throw new Error("usePostRideDraft must be used within a PostRideProvider");
   }
   return context;
 }

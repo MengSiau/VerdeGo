@@ -140,9 +140,8 @@ export function PostVehicle() {
         )}
       </ScrollView>
 
-      {/* TODO: navigate to /post-fare once that step is built. */}
       <View style={styles.actions}>
-        <PrimaryButton label="Next: Fare" />
+        <PrimaryButton label="Next: Fare" onPress={() => router.push('/post-fare')} />
       </View>
     </View>
   );

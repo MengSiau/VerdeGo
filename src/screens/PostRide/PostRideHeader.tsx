@@ -7,6 +7,12 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { ProgressBar } from '@/src/components/ProgressBar';
 import { colors, fontFamily, fontSize, gradients, screenPaddingX } from '@/src/theme';
 
+/*
+Usage: 
+Defines the top header used in the post-a-ride flow. 
+Displays name of step, progress bar and back btn
+*/ 
+
 const TOTAL_STEPS = 4;
 
 type PostRideHeaderProps = {
