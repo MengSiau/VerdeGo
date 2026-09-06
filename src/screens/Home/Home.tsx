@@ -9,7 +9,8 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomNav } from '@/src/components/BottomNav';
 import { FilterChips } from '@/src/components/FilterChips';
 import { RideCard } from '@/src/components/RideCard';
-import { DUMMY_RIDES } from '@/src/data/rides';
+import { CURRENT_USER_ID } from '@/src/data/currentUser';
+import { useRidesStore } from '@/src/data/RidesStore';
 import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
 
 type SortFilter = 'eco' | 'cost' | 'time';
@@ -23,11 +24,16 @@ const SORT_LABEL: Record<SortFilter, string> = {
 export function Home() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { rides } = useRidesStore();
   const [sort, setSort] = useState<SortFilter>('eco');
 
+  // Don't show the viewer their own posted rides in the browse feed - you wouldn't
+  // request to join a ride you're the one offering.
+  const browsableRides = useMemo(() => rides.filter((ride) => ride.driverId !== CURRENT_USER_ID), [rides]);
+
   const totalCo2Saved = useMemo(
-    () => DUMMY_RIDES.reduce((sum, ride) => sum + ride.co2SavedKg, 0),
-    []
+    () => browsableRides.reduce((sum, ride) => sum + ride.co2SavedKg, 0),
+    [browsableRides]
   );
 
   return (
@@ -60,7 +66,7 @@ export function Home() {
             onChange={setSort}
           />
           <Text style={styles.resultsText}>
-            {DUMMY_RIDES.length} rides available · sorted by {SORT_LABEL[sort]}
+            {browsableRides.length} rides available · sorted by {SORT_LABEL[sort]}
           </Text>
         </View>
 
@@ -68,7 +74,7 @@ export function Home() {
           style={styles.fill}
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}>
-          {DUMMY_RIDES.map((ride) => (
+          {browsableRides.map((ride) => (
             <RideCard key={ride.id} ride={ride} onPress={() => router.push(`/ride-details/${ride.id}`)} />
           ))}
         </ScrollView>

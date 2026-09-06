@@ -12,6 +12,8 @@ import {
   Poppins_800ExtraBold,
 } from '@expo-google-fonts/poppins';
 
+import { RidesStoreProvider } from '@/src/data/RidesStore';
+
 export {
   // Catch any errors thrown by the Layout component.
   ErrorBoundary,
@@ -48,12 +50,14 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={DefaultTheme}>
-      <Stack screenOptions={{ headerShown: false }}>
-        {/* Top-level bottom-nav sections swap instantly rather than sliding in like a
-            deeper/nested screen - everything else keeps the default push animation. */}
-        <Stack.Screen name="home" options={{ animation: 'none' }} />
-        <Stack.Screen name="my-rides" options={{ animation: 'none' }} />
-      </Stack>
+      <RidesStoreProvider>
+        <Stack screenOptions={{ headerShown: false }}>
+          {/* Top-level bottom-nav sections swap instantly rather than sliding in like a
+              deeper/nested screen - everything else keeps the default push animation. */}
+          <Stack.Screen name="home" options={{ animation: 'none' }} />
+          <Stack.Screen name="my-rides" options={{ animation: 'none' }} />
+        </Stack>
+      </RidesStoreProvider>
     </ThemeProvider>
   );
 }

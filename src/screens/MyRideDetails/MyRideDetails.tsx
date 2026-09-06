@@ -4,7 +4,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { RideOverview } from '@/src/components/RideOverview';
 import { SecondaryButton } from '@/src/components/SecondaryButton';
-import { DUMMY_RIDES } from '@/src/data/rides';
+import { useRidesStore } from '@/src/data/RidesStore';
 import { colors, fontFamily, fontSize } from '@/src/theme';
 
 import { CancelRideModal } from './CancelRideModal';
@@ -14,7 +14,8 @@ import { CancelRideModal } from './CancelRideModal';
 export function MyRideDetails() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const ride = DUMMY_RIDES.find((r) => r.id === id);
+  const { rides } = useRidesStore();
+  const ride = rides.find((r) => r.id === id);
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
 
   if (!ride) {

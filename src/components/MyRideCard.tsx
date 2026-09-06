@@ -9,14 +9,25 @@ import { Avatar } from './Avatar';
 type MyRideCardProps = {
   ride: Ride;
   dateLabel: string;
+  role: 'driver' | 'passenger';
   onPress?: () => void;
 };
 
 // TODO: swap the route preview strip for a real map once map integration exists.
-export function MyRideCard({ ride, dateLabel, onPress }: MyRideCardProps) {
+export function MyRideCard({ ride, dateLabel, role, onPress }: MyRideCardProps) {
   return (
     <Pressable onPress={onPress} style={styles.card}>
       <View style={styles.routePreview}>
+        <View style={[styles.roleBadge, role === 'driver' ? styles.roleBadgeDriver : styles.roleBadgePassenger]}>
+          <Ionicons
+            name={role === 'driver' ? 'car-sport' : 'person'}
+            size={12}
+            color={role === 'driver' ? colors.neutral.white : colors.neutral.gray700}
+          />
+          <Text style={[styles.roleBadgeText, role === 'passenger' && styles.roleBadgeTextPassenger]}>
+            {role === 'driver' ? 'Driving' : 'Riding'}
+          </Text>
+        </View>
         <View style={styles.dateBadge}>
           <Text style={styles.dateBadgeText}>{dateLabel}</Text>
         </View>
@@ -28,7 +39,13 @@ export function MyRideCard({ ride, dateLabel, onPress }: MyRideCardProps) {
           <View style={styles.driverInfo}>
             <Text style={styles.driverName}>{ride.driverName}</Text>
             <Text style={styles.driverMeta}>
-              Driver · {ride.rating.toFixed(1)} <Text style={styles.star}>★</Text>
+              {role === 'driver' ? (
+                `${ride.seats - ride.confirmedPassengers.length} seat${ride.seats - ride.confirmedPassengers.length === 1 ? '' : 's'} left`
+              ) : (
+                <>
+                  Driver · {ride.rating.toFixed(1)} <Text style={styles.star}>★</Text>
+                </>
+              )}
             </Text>
           </View>
           <View style={styles.priceColumn}>
@@ -75,7 +92,31 @@ const styles = StyleSheet.create({
     height: 110,
     backgroundColor: mapBg,
     padding: 12,
-    alignItems: 'flex-end',
+    flexDirection: 'row',
+    alignItems: 'flex-start',
+    justifyContent: 'space-between',
+  },
+  roleBadge: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+    paddingHorizontal: 10,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+  },
+  roleBadgeDriver: {
+    backgroundColor: colors.brand.verde600,
+  },
+  roleBadgePassenger: {
+    backgroundColor: colors.neutral.white,
+  },
+  roleBadgeText: {
+    fontFamily: fontFamily.headingSemibold,
+    fontSize: fontSize.xs,
+    color: colors.neutral.white,
+  },
+  roleBadgeTextPassenger: {
+    color: colors.neutral.gray700,
   },
   dateBadge: {
     paddingHorizontal: 12,

@@ -5,14 +5,15 @@ import { StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/src/components/PrimaryButton';
-import { DUMMY_RIDES } from '@/src/data/rides';
+import { useRidesStore } from '@/src/data/RidesStore';
 import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
 
 export function RideRequestSent() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const ride = DUMMY_RIDES.find((r) => r.id === id);
+  const { rides } = useRidesStore();
+  const ride = rides.find((r) => r.id === id);
 
   if (!ride) {
     return (

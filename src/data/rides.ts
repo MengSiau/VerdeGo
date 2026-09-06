@@ -5,6 +5,7 @@ export type Passenger = {
 
 export type Ride = {
   id: string;
+  driverId: string;
   driverName: string;
   rating: number;
   ratingCount: number;
@@ -31,6 +32,7 @@ export type MyRideBooking = {
 export const DUMMY_RIDES: Ride[] = [
   {
     id: '1',
+    driverId: 'u-priya',
     driverName: 'Priya Sharma',
     rating: 5,
     ratingCount: 47,
@@ -49,6 +51,7 @@ export const DUMMY_RIDES: Ride[] = [
   },
   {
     id: '2',
+    driverId: 'u-james',
     driverName: 'James Chen',
     rating: 4,
     ratingCount: 21,
@@ -67,6 +70,7 @@ export const DUMMY_RIDES: Ride[] = [
   },
   {
     id: '3',
+    driverId: 'u-mei',
     driverName: 'Mei Lin',
     rating: 5,
     ratingCount: 63,
@@ -85,6 +89,7 @@ export const DUMMY_RIDES: Ride[] = [
   },
   {
     id: '4',
+    driverId: 'u-arjun',
     driverName: 'Arjun Patel',
     rating: 4,
     ratingCount: 15,

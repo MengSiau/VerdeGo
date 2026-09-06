@@ -7,15 +7,38 @@ import Svg, { Path } from 'react-native-svg';
 
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { SecondaryButton } from '@/src/components/SecondaryButton';
+import { CURRENT_USER_ID, CURRENT_USER_NAME } from '@/src/data/currentUser';
+import { useRidesStore } from '@/src/data/RidesStore';
+import type { Ride } from '@/src/data/rides';
 import { colors, fontFamily, fontSize, mapBg, radius, screenPaddingX } from '@/src/theme';
 
 import { calculateFinalFarePerPassenger, DEMO_DISTANCE_KM } from '../fareCalculator';
 import { usePostRideDraft, type FuelType } from '../PostRideContext';
 
 const DESTINATION_LABEL = 'Monash Clayton';
+const FULL_DESTINATION = 'Monash Clayton Campus';
+const POSTED_RIDE_DURATION_MINUTES = 18; // matches the fixed demo distance used throughout fare/CO2 calcs
 
 function toStationAbbrev(place: string) {
   return place.replace(/ Station$/, ' Stn');
+}
+
+function to24Hour(hour: string, minute: string, period: 'AM' | 'PM') {
+  let hours = parseInt(hour, 10) % 12;
+  if (period === 'PM') hours += 12;
+  return { hours, minutes: parseInt(minute, 10) };
+}
+
+function addMinutes(hours: number, minutes: number, addMinutesAmount: number) {
+  const totalMinutes = hours * 60 + minutes + addMinutesAmount;
+  const wrapped = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
+  return { hours: Math.floor(wrapped / 60), minutes: wrapped % 60 };
+}
+
+function to12HourDisplay(hours: number, minutes: number) {
+  const period = hours >= 12 ? 'PM' : 'AM';
+  const displayHour = hours % 12 === 0 ? 12 : hours % 12;
+  return `${displayHour}:${String(minutes).padStart(2, '0')} ${period}`;
 }
 
 // draft.date is stored as "Wed, Aug 13" (set in PostDatetime) - reformat to the fuller
@@ -37,6 +60,7 @@ export function PostConfirm() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { draft } = usePostRideDraft();
+  const { postRide } = useRidesStore();
 
   const pickup = toStationAbbrev(draft.pickup ?? 'Glen Waverley Station');
   const fuelType = draft.fuelType ?? 'hybrid';
@@ -51,7 +75,37 @@ export function PostConfirm() {
   const co2Total = greenScore ? (greenScore.co2Per100km * DEMO_DISTANCE_KM) / 100 : undefined;
 
   const handlePostRide = () => {
-    // TODO: submit the completed ride draft to backend once it exists.
+    // TODO: submit the completed ride draft to backend once it exists - for now this just
+    // adds the ride to the shared in-memory store so it shows up in Home/My Rides.
+    const { hours, minutes } = to24Hour(draft.hour ?? '08', draft.minute ?? '15', draft.period ?? 'AM');
+    const dropoff = addMinutes(hours, minutes, POSTED_RIDE_DURATION_MINUTES);
+
+    const co2SavedKg =
+      greenScore && co2Total !== undefined
+        ? co2Total / (1 - greenScore.percentBelowAverage / 100) - co2Total
+        : 0;
+
+    const newRide: Ride = {
+      id: `posted-${Date.now()}`,
+      driverId: CURRENT_USER_ID,
+      driverName: CURRENT_USER_NAME,
+      rating: 5,
+      ratingCount: 0,
+      pickup: draft.pickup ?? 'Glen Waverley Station',
+      destination: FULL_DESTINATION,
+      date: draft.date ?? 'Wed, Aug 13',
+      departureTime: timeDisplay,
+      dropoffTimeEstimate: to12HourDisplay(dropoff.hours, dropoff.minutes),
+      distanceKm: DEMO_DISTANCE_KM,
+      seats,
+      durationMinutes: POSTED_RIDE_DURATION_MINUTES,
+      price: fare,
+      co2SavedKg: Math.max(0, co2SavedKg),
+      co2EstimateKg: co2Total ?? 0,
+      confirmedPassengers: [],
+    };
+
+    postRide(newRide, draft.date ?? 'Tomorrow');
     router.push('/home');
   };
 

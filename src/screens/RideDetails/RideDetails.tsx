@@ -3,13 +3,14 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { RideOverview } from '@/src/components/RideOverview';
-import { DUMMY_RIDES } from '@/src/data/rides';
+import { useRidesStore } from '@/src/data/RidesStore';
 import { colors, fontFamily, fontSize } from '@/src/theme';
 
 export function RideDetails() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const ride = DUMMY_RIDES.find((r) => r.id === id);
+  const { rides } = useRidesStore();
+  const ride = rides.find((r) => r.id === id);
 
   if (!ride) {
     return (
