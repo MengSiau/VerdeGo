@@ -17,12 +17,17 @@ export function BottomNav({ active }: { active: BottomNavTab }) {
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 8 }]}>
-      <NavItem icon="home" label="Feed" isActive={active === 'feed'} onPress={() => router.push('/home')} />
+      <NavItem
+        icon="home"
+        label="Feed"
+        isActive={active === 'feed'}
+        onPress={() => router.replace('/home')}
+      />
       <NavItem
         icon="car"
         label="My Rides"
         isActive={active === 'myRides'}
-        onPress={() => router.push('/my-rides')}
+        onPress={() => router.replace('/my-rides')}
       />
       <Pressable style={styles.fab}>
         <LinearGradient colors={gradients.postFabButton} style={styles.fabGradient}>

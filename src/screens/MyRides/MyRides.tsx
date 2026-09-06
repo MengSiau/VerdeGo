@@ -54,7 +54,7 @@ export function MyRides() {
                 key={ride.id}
                 ride={ride}
                 dateLabel={booking.dateLabel}
-                onPress={() => router.push(`/ride-details/${ride.id}`)}
+                onPress={() => router.push(`/my-ride-details/${ride.id}`)}
               />
             ))}
             <View style={styles.endOfList}>
