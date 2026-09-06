@@ -1,5 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
 import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -9,14 +10,20 @@ export type BottomNavTab = 'feed' | 'myRides' | 'requests' | 'profile';
 
 type NavIconName = 'home' | 'car' | 'notifications' | 'person';
 
-// TODO: wire onPress navigation once My Rides / Requests / Profile screens exist.
+// TODO: wire Requests / Profile once those screens exist.
 export function BottomNav({ active }: { active: BottomNavTab }) {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
 
   return (
     <View style={[styles.container, { paddingBottom: insets.bottom + 8 }]}>
-      <NavItem icon="home" label="Feed" isActive={active === 'feed'} />
-      <NavItem icon="car" label="My Rides" isActive={active === 'myRides'} />
+      <NavItem icon="home" label="Feed" isActive={active === 'feed'} onPress={() => router.push('/home')} />
+      <NavItem
+        icon="car"
+        label="My Rides"
+        isActive={active === 'myRides'}
+        onPress={() => router.push('/my-rides')}
+      />
       <Pressable style={styles.fab}>
         <LinearGradient colors={gradients.postFabButton} style={styles.fabGradient}>
           <Ionicons name="add" size={22} color={colors.neutral.white} />
@@ -28,11 +35,21 @@ export function BottomNav({ active }: { active: BottomNavTab }) {
   );
 }
 
-function NavItem({ icon, label, isActive }: { icon: NavIconName; label: string; isActive: boolean }) {
+function NavItem({
+  icon,
+  label,
+  isActive,
+  onPress,
+}: {
+  icon: NavIconName;
+  label: string;
+  isActive: boolean;
+  onPress?: () => void;
+}) {
   const color = isActive ? colors.brand.verde600 : colors.neutral.gray400;
 
   return (
-    <Pressable style={styles.item}>
+    <Pressable style={styles.item} onPress={onPress}>
       <Ionicons name={isActive ? icon : (`${icon}-outline` as const)} size={22} color={color} />
       <Text style={[styles.itemLabel, { color }]}>{label}</Text>
     </Pressable>
