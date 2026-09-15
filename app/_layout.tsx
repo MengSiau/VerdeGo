@@ -17,6 +17,7 @@ import {
 } from "@expo-google-fonts/poppins";
 
 import { RidesStoreProvider } from "@/src/data/RidesStore";
+import { UserDetailStoreProvider } from '@/src/data/UserDetailStore';
 
 export {
   // Catch any errors thrown by the Layout component.
@@ -54,20 +55,17 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={DefaultTheme}>
-      <UserStoreProvider>
+      <UserDetailStoreProvider>
         <RidesStoreProvider>
           <Stack screenOptions={{ headerShown: false }}>
             {/* Top-level bottom-nav sections swap instantly rather than sliding in like a
                 deeper/nested screen - everything else keeps the default push animation. */}
             <Stack.Screen name="home" options={{ animation: "none" }} />
             <Stack.Screen name="my-rides" options={{ animation: "none" }} />
-            <Stack.Screen
-              name="profile"
-              options={{ animation: "none" }}
-            />
+            <Stack.Screen name="profile" options={{ animation: "none" }} />
           </Stack>
         </RidesStoreProvider>
-      </UserStoreProvider>
+      </UserDetailStoreProvider>
     </ThemeProvider>
   );
 }

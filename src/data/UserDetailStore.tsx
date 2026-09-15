@@ -16,7 +16,7 @@ import {
     type UserProfile,
 } from "./currentUser";
 
-type UserStoreValue = {
+type UserDetailStoreValue = {
   profile: UserProfile;
   togglePushNotifications: () => void;
   setTextSize: (size: TextSizePreference) => void;
@@ -24,16 +24,16 @@ type UserStoreValue = {
 };
 
 // use to share data across components - share of the type UserStoreValue
-const UserStoreContext = createContext<UserStoreValue | null>(null);
+const UserDetailStoreContext = createContext<UserDetailStoreValue | null>(null);
 
 // App-wide store for the signed-in user's profile, seeded from DEFAULT_USER_PROFILE. This is
 // what lets data collected in ProfileSetup (signup) actually show up on the Profile screen
 // without a real backend - same pattern as RidesStore for ride data.
-export function UserStoreProvider({ children }: { children: ReactNode }) {
+export function UserDetailStoreProvider({ children }: { children: ReactNode }) {
   // start with default user profile (set in currentUser.ts)
   const [profile, setProfile] = useState<UserProfile>(DEFAULT_USER_PROFILE);
 
-  const value = useMemo<UserStoreValue>(
+  const value = useMemo<UserDetailStoreValue>(
     () => ({
       profile,
       //changing general profile fields
@@ -58,14 +58,14 @@ export function UserStoreProvider({ children }: { children: ReactNode }) {
   );
 
   return (
-    <UserStoreContext.Provider value={value}>
+    <UserDetailStoreContext.Provider value={value}>
       {children}
-    </UserStoreContext.Provider>
+    </UserDetailStoreContext.Provider>
   );
 }
 
-export function useUserStore() {
-  const context = useContext(UserStoreContext);
+export function useUserDetailStore() {
+  const context = useContext(UserDetailStoreContext);
   if (!context) {
     throw new Error(
       "useUserDetailStore must be used within a UserDetailStoreProvider",
