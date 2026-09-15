@@ -62,7 +62,7 @@ export default function RootLayout() {
             <Stack.Screen name="home" options={{ animation: "none" }} />
             <Stack.Screen name="my-rides" options={{ animation: "none" }} />
             <Stack.Screen
-              name="profile-setup"
+              name="profile"
               options={{ animation: "none" }}
             />
           </Stack>
