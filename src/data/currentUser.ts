@@ -18,3 +18,17 @@ export type UserProfile = {
   prefTextSize: TextSizePreference;
   contrast: boolean;
 };
+
+//create blank default
+export const DEFAULT_USER_PROFILE: UserProfile = {
+  firstName: "",
+  lastName: "",
+  studentId: "",
+  email: "",
+  rating: 0,
+  totalRides: 0,
+  userGreenScore: "+",
+  notificationEnabled: true,
+  prefTextSize: "normal",
+  contrast: false,
+};
