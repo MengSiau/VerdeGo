@@ -32,8 +32,6 @@ export function AuthProvider({ children }: { children: ReactNode }) {
   const [signingIn, setSigningIn] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
-  const redirectTo = Linking.createURL('/auth/callback');
-    console.log('redirectTo:', redirectTo);
 
   useEffect(() => {
     supabase.auth.getSession().then(({ data }) => {
