@@ -90,38 +90,6 @@ export function ProfileSetup() {
         </View>
 
         <View style={styles.fieldGroup}>
-          <TextField
-            label="Student/Staff ID"
-            placeholder="Student/Staff ID"
-            keyboardType="number-pad"
-            value={studentId}
-            onChangeText={setStudentId}
-          />
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <TextField
-            label="Create Password"
-            placeholder="••••••••"
-            secureTextEntry
-            autoComplete="password-new"
-            value={password}
-            onChangeText={setPassword}
-          />
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <TextField
-            label="Confirm Password"
-            placeholder="••••••••"
-            secureTextEntry
-            autoComplete="password-new"
-            value={confirmPassword}
-            onChangeText={setConfirmPassword}
-          />
-        </View>
-
-        <View style={styles.fieldGroup}>
           <CalloutBanner
             variant="info"
             heading="Monash Verified"
