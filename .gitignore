@@ -39,3 +39,17 @@ yarn-error.*
 # generated native folders
 /ios
 /android
+
+# Visual Studio Code specific files and directories
+.vscode/
+!.vscode/extensions.json
+!.vscode/launch.json
+!.vscode/tasks.json
+!.vscode/settings.json
+
+# Local history extensions
+.history/
+
+# Built-in crash reports and logs
+*.code-workspace
+.vscode-test/
