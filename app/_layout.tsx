@@ -12,6 +12,8 @@ import {
   Poppins_800ExtraBold,
 } from '@expo-google-fonts/poppins';
 
+import { VehiclesProvider } from '@/src/data/TempVehicleContext';
+
 import { RidesStoreProvider } from '@/src/data/RidesStore';
 
 export {
@@ -50,14 +52,16 @@ export default function RootLayout() {
 
   return (
     <ThemeProvider value={DefaultTheme}>
-      <RidesStoreProvider>
-        <Stack screenOptions={{ headerShown: false }}>
-          {/* Top-level bottom-nav sections swap instantly rather than sliding in like a
-              deeper/nested screen - everything else keeps the default push animation. */}
-          <Stack.Screen name="home" options={{ animation: 'none' }} />
-          <Stack.Screen name="my-rides" options={{ animation: 'none' }} />
-        </Stack>
-      </RidesStoreProvider>
+      <VehiclesProvider>
+        <RidesStoreProvider>
+          <Stack screenOptions={{ headerShown: false }}>
+            {/* Top-level bottom-nav sections swap instantly rather than sliding in like a
+                deeper/nested screen - everything else keeps the default push animation. */}
+            <Stack.Screen name="home" options={{ animation: 'none' }} />
+            <Stack.Screen name="my-rides" options={{ animation: 'none' }} />
+          </Stack>
+        </RidesStoreProvider>
+      </VehiclesProvider>
     </ThemeProvider>
   );
 }
