@@ -1,21 +1,32 @@
-import { Ionicons, MaterialIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { CalloutBanner } from '@/src/components/CalloutBanner';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
-import { SecondaryButton } from '@/src/components/SecondaryButton';
 import { TextField } from '@/src/components/TextField';
 import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
 
-export function LoginSignIn() {
+// Domains accepted for VerdeGo sign-up. Front-end check only - no backend/auth wired up yet.
+const ACCEPTED_DOMAINS = ['@student.monash.edu', '@monash.edu'];
+
+function isMonashEmail(email: string) {
+  const normalized = email.trim().toLowerCase();
+  return ACCEPTED_DOMAINS.some((domain) => normalized.endsWith(domain));
+}
+
+export function SignUpEmail() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  // Demo shortcut: Sign In implies an existing account, so go straight to Home
-  // until real account lookup/auth exists.
-  const goToHome = () => router.push('/home');
+  const [email, setEmail] = useState('');
+
+  const handleVerify = () => {
+    const status = isMonashEmail(email) ? 'success' : 'error';
+    router.push({ pathname: '/verify-email', params: { email, status } });
+  };
 
   return (
     <View style={styles.fill}>
@@ -27,7 +38,7 @@ export function LoginSignIn() {
           { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 },
         ]}
         keyboardShouldPersistTaps="handled">
-        <Text style={styles.title}>Sign In</Text>
+        <Text style={styles.title}>Sign Up</Text>
         <Text style={styles.subtitle}>Use your Monash University email to get started.</Text>
 
         <CalloutBanner
@@ -48,34 +59,21 @@ export function LoginSignIn() {
             keyboardType="email-address"
             autoCapitalize="none"
             autoComplete="email"
+            value={email}
+            onChangeText={setEmail}
           />
         </View>
 
         <View style={styles.fieldGroup}>
-          <TextField label="Password" placeholder="••••••••" secureTextEntry autoComplete="password" />
+          <PrimaryButton label="Verify" onPress={handleVerify} />
         </View>
-
-        <View style={styles.fieldGroup}>
-          <PrimaryButton label="Continue with Monash" onPress={goToHome} />
-        </View>
-
-        <View style={styles.divider}>
-          <View style={styles.dividerLine} />
-          <Text style={styles.dividerText}>or</Text>
-          <View style={styles.dividerLine} />
-        </View>
-
-        <SecondaryButton
-          label="Sign in with Monash SSO"
-          icon={<MaterialIcons name="account-balance" size={20} color={colors.neutral.gray700} />}
-        />
 
         <Text style={styles.footerText}>
-
-          Don&apos;t have an account?{' '}
-          <Text style={styles.footerLink} onPress={() => router.push('/signup-email')}>
-            Sign up          </Text>
-         </Text>
+          Already have an account?{' '}
+          <Text style={styles.footerLink} onPress={() => router.push('/login-signin')}>
+            Sign in
+          </Text>
+        </Text>
       </ScrollView>
     </View>
   );
@@ -110,22 +108,6 @@ const styles = StyleSheet.create({
   },
   fieldGroup: {
     marginTop: 20,
-  },
-  divider: {
-    marginVertical: 20,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  dividerLine: {
-    flex: 1,
-    height: 1,
-    backgroundColor: colors.neutral.gray200,
-  },
-  dividerText: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray500,
   },
   footerText: {
     marginTop: 20,
