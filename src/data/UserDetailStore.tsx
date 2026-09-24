@@ -18,6 +18,7 @@ import {
 
 type UserDetailStoreValue = {
   profile: UserProfile;
+  updateProfile: (fields: Partial<UserProfile>) => void;
   togglePushNotifications: () => void;
   setTextSize: (size: TextSizePreference) => void;
   toggleHighContrastMode: () => void;

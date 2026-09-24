@@ -1,13 +1,24 @@
 import { Ionicons } from "@expo/vector-icons";
 import { LinearGradient } from "expo-linear-gradient";
 import { StatusBar } from "expo-status-bar";
-import { useMemo } from "react";
-import { ScrollView, StyleSheet, Switch, Text, View } from "react-native";
+import { useMemo, useState } from "react";
+import {
+  Modal,
+  Pressable,
+  ScrollView,
+  StyleSheet,
+  Switch,
+  Text,
+  View,
+} from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
 
 import { AccountRow } from "@/src/components/AccountRow";
 import { BottomNav } from "@/src/components/BottomNav";
+import { PrimaryButton } from "@/src/components/PrimaryButton";
+import { SecondaryButton } from "@/src/components/SecondaryButton";
 import { SegmentedOptions } from "@/src/components/SegmentedOptions";
+import { TextField } from "@/src/components/TextField";
 import { useUserDetailStore } from "@/src/data/UserDetailStore";
 import {
   colors,
@@ -25,6 +36,7 @@ export function Profile() {
     togglePushNotifications,
     setTextSize,
     toggleHighContrastMode,
+    updateProfile,
   } = useUserDetailStore();
 
   //default to 'your name' if strings are empty
@@ -37,6 +49,21 @@ export function Profile() {
     const last = profile.lastName.trim().charAt(0);
     return (first + last).toUpperCase() || "?";
   }, [profile.firstName, profile.lastName]);
+
+  const [isEditingName, setIsEditingName] = useState(false);
+  const [draftPreferredName, setDraftPreferredName] = useState(
+    profile.preferredName,
+  );
+
+  const openEditName = () => {
+    setDraftPreferredName(profile.preferredName); // reset draft to current saved value
+    setIsEditingName(true);
+  };
+
+  const savePreferredName = () => {
+    updateProfile({ preferredName: draftPreferredName.trim() });
+    setIsEditingName(false);
+  };
 
   return (
     <View style={styles.fill}>
@@ -63,7 +90,26 @@ export function Profile() {
           </View>
 
           <View style={styles.identityText}>
-            <Text style={styles.name}>{fullName}</Text>
+            <View style={styles.identityText}>
+              <View style={styles.nameRow}>
+                <Text style={styles.name}>{fullName}</Text>
+                <Pressable onPress={openEditName} hitSlop={8}>
+                  <Ionicons
+                    name="pencil"
+                    size={16}
+                    color={colors.neutral.white}
+                  />
+                </Pressable>
+              </View>
+
+              {profile.preferredName.trim() !== "" && (
+                <Text style={styles.preferredNameText}>
+                  PREFERRED NAME: {profile.preferredName}
+                </Text>
+              )}
+
+              <View style={styles.subRow}>...</View>
+            </View>
             {profile.preferredName.trim() !== "" && (
               <Text style={styles.preferredNameText}>
                 PREFERRED NAME: {profile.preferredName}
@@ -178,6 +224,34 @@ export function Profile() {
       </ScrollView>
 
       <BottomNav active="profile" />
+      <Modal
+        visible={isEditingName}
+        transparent
+        animationType="fade"
+        onRequestClose={() => setIsEditingName(false)}
+      >
+        <View style={styles.modalBackdrop}>
+          <View style={styles.modalCard}>
+            <Text style={styles.modalTitle}>Preferred Name</Text>
+            <Text style={styles.modalSubtitle}>
+              This is what other users will see instead of your sign-up name.
+            </Text>
+            <TextField
+              label="Preferred Name"
+              placeholder={fullName}
+              value={draftPreferredName}
+              onChangeText={setDraftPreferredName}
+            />
+            <View style={styles.modalActions}>
+              <SecondaryButton
+                label="Cancel"
+                onPress={() => setIsEditingName(false)}
+              />
+              <PrimaryButton label="Save" onPress={savePreferredName} />
+            </View>
+          </View>
+        </View>
+      </Modal>
     </View>
   );
 }
@@ -265,6 +339,11 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.headingBold,
     fontSize: fontSize.xl,
     color: colors.neutral.white,
+  },
+  nameRow: {
+    flexDirection: "row",
+    alignItems: "center",
+    gap: 8,
   },
   preferredNameText: {
     marginTop: 2,
@@ -372,5 +451,40 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyRegular,
     fontSize: fontSize["2xs"],
     color: colors.neutral.gray400,
+  },
+  // adds the semi-transparent layer behind card
+  modalBackdrop: {
+    flex: 1,
+    backgroundColor: "rgba(0,0,0,0.5)",
+    alignItems: "center",
+    justifyContent: "center",
+    paddingHorizontal: 24,
+  },
+  // white pop-up box
+  modalCard: {
+    width: "100%",
+    borderRadius: radius["2xl"],
+    backgroundColor: colors.neutral.white,
+    padding: 20,
+    gap: 12,
+  },
+  //styling for preferred name
+  modalTitle: {
+    fontFamily: fontFamily.headingBold,
+    fontSize: fontSize.lg,
+    color: colors.neutral.gray800,
+  },
+  //styling for preferred name
+  modalSubtitle: {
+    fontFamily: fontFamily.bodyRegular,
+    fontSize: fontSize.sm,
+    color: colors.neutral.gray500,
+  },
+  //cancel/save buttons
+  modalActions: {
+    flexDirection: "row",
+    justifyContent: "flex-end",
+    gap: 12,
+    marginTop: 4,
   },
 });
