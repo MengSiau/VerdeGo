@@ -4,7 +4,6 @@ import { StatusBar } from "expo-status-bar";
 import { useMemo, useState } from "react";
 import {
   Modal,
-  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -90,26 +89,8 @@ export function Profile() {
           </View>
 
           <View style={styles.identityText}>
-            <View style={styles.identityText}>
-              <View style={styles.nameRow}>
-                <Text style={styles.name}>{fullName}</Text>
-                <Pressable onPress={openEditName} hitSlop={8}>
-                  <Ionicons
-                    name="pencil"
-                    size={16}
-                    color={colors.neutral.white}
-                  />
-                </Pressable>
-              </View>
+            <Text style={styles.name}>{fullName}</Text>
 
-              {profile.preferredName.trim() !== "" && (
-                <Text style={styles.preferredNameText}>
-                  PREFERRED NAME: {profile.preferredName}
-                </Text>
-              )}
-
-              <View style={styles.subRow}>...</View>
-            </View>
             {profile.preferredName.trim() !== "" && (
               <Text style={styles.preferredNameText}>
                 PREFERRED NAME: {profile.preferredName}
@@ -118,18 +99,15 @@ export function Profile() {
 
             <View style={styles.subRow}>
               <Text style={styles.subText}>Student</Text>
-              {
-                <>
-                  <Text style={styles.subDot}>·</Text>
-                  <Text style={styles.subText}>Monash Verified</Text>
-                  <Ionicons
-                    name="checkmark-circle"
-                    size={14}
-                    color={colors.neutral.white}
-                  />
-                </>
-              }
+              <Text style={styles.subDot}>·</Text>
+              <Text style={styles.subText}>Monash Verified</Text>
+              <Ionicons
+                name="checkmark-circle"
+                size={14}
+                color={colors.neutral.white}
+              />
             </View>
+
             <View style={styles.statsRow}>
               <Ionicons name="star" size={13} color={colors.accent.amber400} />
               <Text style={styles.statsText}>
@@ -151,7 +129,11 @@ export function Profile() {
       >
         <Section title="Account">
           <Card>
-            <AccountRow icon="person-outline" label="Personal Info" />
+            <AccountRow
+              icon="person-outline"
+              label="Personal Info"
+              onPress={openEditName}
+            />
             <Divider />
             <AccountRow icon="car-outline" label="Vehicle Details" />
             <Divider />
