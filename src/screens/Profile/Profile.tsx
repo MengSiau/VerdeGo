@@ -10,12 +10,12 @@ import { BottomNav } from "@/src/components/BottomNav";
 import { SegmentedOptions } from "@/src/components/SegmentedOptions";
 import { useUserDetailStore } from "@/src/data/UserDetailStore";
 import {
-    colors,
-    fontFamily,
-    fontSize,
-    gradients,
-    radius,
-    screenPaddingX,
+  colors,
+  fontFamily,
+  fontSize,
+  gradients,
+  radius,
+  screenPaddingX,
 } from "@/src/theme";
 
 export function Profile() {
@@ -51,7 +51,7 @@ export function Profile() {
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarInitials}>{initials}</Text>
             </View>
-            {profile.monashVerified && (
+            {
               <View style={styles.avatarStatusDot}>
                 <Ionicons
                   name="checkmark"
@@ -59,14 +59,20 @@ export function Profile() {
                   color={colors.neutral.white}
                 />
               </View>
-            )}
+            }
           </View>
 
           <View style={styles.identityText}>
             <Text style={styles.name}>{fullName}</Text>
+            {profile.preferredName.trim() !== "" && (
+              <Text style={styles.preferredNameText}>
+                PREFERRED NAME: {profile.preferredName}
+              </Text>
+            )}
+
             <View style={styles.subRow}>
               <Text style={styles.subText}>Student</Text>
-              {profile.monashVerified && (
+              {
                 <>
                   <Text style={styles.subDot}>·</Text>
                   <Text style={styles.subText}>Monash Verified</Text>
@@ -76,13 +82,13 @@ export function Profile() {
                     color={colors.neutral.white}
                   />
                 </>
-              )}
+              }
             </View>
             <View style={styles.statsRow}>
               <Ionicons name="star" size={13} color={colors.accent.amber400} />
               <Text style={styles.statsText}>
                 {profile.rating.toFixed(1)} · {profile.totalRides} rides ·{" "}
-                {profile.greenGrade} Green Driver
+                {profile.userGreenScore} Green Driver
               </Text>
             </View>
           </View>
@@ -259,6 +265,13 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.headingBold,
     fontSize: fontSize.xl,
     color: colors.neutral.white,
+  },
+  preferredNameText: {
+    marginTop: 2,
+    fontFamily: fontFamily.bodyMedium,
+    fontSize: fontSize.xs,
+    color: "rgba(255,255,255,0.85)",
+    letterSpacing: 0.3,
   },
   subRow: {
     flexDirection: "row",

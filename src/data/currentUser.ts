@@ -3,17 +3,18 @@
 export const CURRENT_USER_ID = "me";
 export const CURRENT_USER_NAME = "You";
 
-import type { GreenScore } from "@/src/screens/PostRide/PostRideContext";
+import type { GreenScoreGrade } from "@/src/screens/PostRide/PostRideContext";
 export type TextSizePreference = "normal" | "large";
 
 export type UserProfile = {
   firstName: string; //assume like Monash and have first + middle together
   lastName: string;
+  preferredName: string;
   studentId: string;
   email: string;
   rating: number;
   totalRides: number;
-  userGreenScore: GreenScore;
+  userGreenScore: GreenScoreGrade;
   notificationEnabled: boolean; //notification section on figma mockup
   prefTextSize: TextSizePreference;
   contrast: boolean;
@@ -23,11 +24,12 @@ export type UserProfile = {
 export const DEFAULT_USER_PROFILE: UserProfile = {
   firstName: "",
   lastName: "",
+  preferredName: "",
   studentId: "",
   email: "",
   rating: 0,
   totalRides: 0,
-  userGreenScore: "+",
+  userGreenScore: "C",
   notificationEnabled: true,
   prefTextSize: "normal",
   contrast: false,
