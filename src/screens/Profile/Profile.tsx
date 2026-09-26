@@ -4,6 +4,7 @@ import { StatusBar } from "expo-status-bar";
 import { useMemo, useState } from "react";
 import {
   Modal,
+  Pressable,
   ScrollView,
   StyleSheet,
   Switch,
@@ -27,9 +28,11 @@ import {
   radius,
   screenPaddingX,
 } from "@/src/theme";
+import { useRouter } from "expo-router";
 
 export function Profile() {
   const insets = useSafeAreaInsets();
+  const router = useRouter();
   const {
     profile,
     togglePushNotifications,
@@ -64,6 +67,9 @@ export function Profile() {
     setIsEditingName(false);
   };
 
+  const handleSignOut = () => {
+    router.replace("/");
+  };
   return (
     <View style={styles.fill}>
       <StatusBar style="light" />
@@ -203,6 +209,16 @@ export function Profile() {
             </Text>
           </Card>
         </Section>
+
+        <Pressable
+          onPress={handleSignOut}
+          style={({ pressed }) => [
+            styles.signOutButton,
+            pressed && styles.signOutButtonPressed,
+          ]}
+        >
+          <Text style={styles.signOutLabel}>Sign Out</Text>
+        </Pressable>
       </ScrollView>
 
       <BottomNav active="profile" />
@@ -333,6 +349,24 @@ const styles = StyleSheet.create({
     fontSize: fontSize.xs,
     color: "rgba(255,255,255,0.85)",
     letterSpacing: 0.3,
+  },
+  signOutButton: {
+    marginTop: 4,
+    minHeight: 48,
+    borderRadius: radius.xl,
+    borderWidth: 1.5,
+    borderColor: colors.semantic.danger,
+    backgroundColor: colors.neutral.white,
+    alignItems: "center",
+    justifyContent: "center",
+  },
+  signOutButtonPressed: {
+    opacity: 0.6,
+  },
+  signOutLabel: {
+    fontFamily: fontFamily.bodySemibold,
+    fontSize: fontSize.base,
+    color: colors.semantic.danger,
   },
   subRow: {
     flexDirection: "row",
