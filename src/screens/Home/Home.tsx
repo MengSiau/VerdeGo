@@ -3,9 +3,9 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ScrollView, StyleSheet, Text, View, Button } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { useAuth } from '@/src/auth/AuthProvider';
 import { BottomNav } from '@/src/components/BottomNav';
 import { FilterChips } from '@/src/components/FilterChips';
 import { RideCard } from '@/src/components/RideCard';
@@ -26,6 +26,7 @@ export function Home() {
   const router = useRouter();
   const { rides } = useRidesStore();
   const [sort, setSort] = useState<SortFilter>('eco');
+  const { signOut } = useAuth();
 
   // Don't show the viewer their own posted rides in the browse feed - you wouldn't
   // request to join a ride you're the one offering.
@@ -69,7 +70,8 @@ export function Home() {
             {browsableRides.length} rides available · sorted by {SORT_LABEL[sort]}
           </Text>
         </View>
-
+        <Button title="Temp Sign Out" onPress={signOut} />
+        
         <ScrollView
           style={styles.fill}
           contentContainerStyle={styles.listContent}
