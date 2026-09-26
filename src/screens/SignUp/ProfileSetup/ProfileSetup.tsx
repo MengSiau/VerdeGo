@@ -18,23 +18,9 @@ import {
   radius,
   screenPaddingX,
 } from "@/src/theme";
-=======
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
-import { CalloutBanner } from '@/src/components/CalloutBanner';
-import { PrimaryButton } from '@/src/components/PrimaryButton';
-import { ProgressBar } from '@/src/components/ProgressBar';
-import { TextField } from '@/src/components/TextField';
-import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
 import { Button } from 'react-native';
 import { useAuth } from '@/src/auth/AuthProvider';
 
->>>>>>> dev
 
 const TOTAL_STEPS = 2;
 const CURRENT_STEP = 2;
@@ -45,23 +31,14 @@ export function ProfileSetup() {
   const { email } = useLocalSearchParams<{ email?: string }>();
   const { updateProfile } = useUserDetailStore();
 
-<<<<<<< HEAD
+
   const [firstName, setFirstName] = useState("");
   const [lastName, setLastName] = useState("");
   const [studentId, setStudentId] = useState("");
   const [password, setPassword] = useState("");
   const [confirmPassword, setConfirmPassword] = useState("");
-=======
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [studentId, setStudentId] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  // inside the component
   const { signOut } = useAuth();
 
-
->>>>>>> dev
 
   // Avatar initials: first letter of first name + first letter of last name, e.g. "Priya Sharma" -> "PS".
   const initials = useMemo(() => {
