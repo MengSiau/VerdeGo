@@ -3,17 +3,17 @@ Holds the user data so profile screen can read from it
 */
 
 import {
-    createContext,
-    useContext,
-    useMemo,
-    useState,
-    type ReactNode,
+  createContext,
+  useContext,
+  useMemo,
+  useState,
+  type ReactNode,
 } from "react";
 
 import {
-    DEFAULT_USER_PROFILE,
-    type TextSizePreference,
-    type UserProfile,
+  DEFAULT_USER_PROFILE,
+  type TextSizePreference,
+  type UserProfile,
 } from "./currentUser";
 
 type UserDetailStoreValue = {
@@ -47,7 +47,7 @@ export function UserDetailStoreProvider({ children }: { children: ReactNode }) {
         })),
       //changing between normal/karge
       setTextSize: (size) =>
-        setProfile((prev) => ({ ...prev, textSize: size })),
+        setProfile((prev) => ({ ...prev, prefTextSize: size })),
       //high contrast mode on and off
       toggleHighContrastMode: () =>
         setProfile((prev) => ({
