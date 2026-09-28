@@ -10,6 +10,9 @@ import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { ProgressBar } from '@/src/components/ProgressBar';
 import { TextField } from '@/src/components/TextField';
 import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
+import { Button } from 'react-native';
+import { useAuth } from '@/src/auth/AuthProvider';
+
 
 const TOTAL_STEPS = 2;
 const CURRENT_STEP = 2;
@@ -24,6 +27,10 @@ export function ProfileSetup() {
   const [studentId, setStudentId] = useState('');
   const [password, setPassword] = useState('');
   const [confirmPassword, setConfirmPassword] = useState('');
+  // inside the component
+  const { signOut } = useAuth();
+
+
 
   // Avatar initials: first letter of first name + first letter of last name, e.g. "Priya Sharma" -> "PS".
   const initials = useMemo(() => {
@@ -133,8 +140,15 @@ export function ProfileSetup() {
         <View style={styles.fieldGroup}>
           <PrimaryButton label="Complete Setup" onPress={handleComplete} />
         </View>
+
+        <View style={styles.fieldGroup}>
+          <Button title="Sign out (temp)" onPress={signOut} />
+        </View>
+        
       </ScrollView>
     </View>
+    
+    
   );
 }
 
