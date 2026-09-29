@@ -1,4 +1,5 @@
 import { LinearGradient } from 'expo-linear-gradient';
+import { Pressable, StyleSheet, Text, type GestureResponderEvent, View } from 'react-native';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 
@@ -13,7 +14,14 @@ type PrimaryButtonProps = {
 };
 
 // Standard app-wide primary CTA: gradients.primaryCTA background, full-width, 56px min height.
-export function PrimaryButton({ label, onPress, icon, disabled = false }: PrimaryButtonProps) {
+export function PrimaryButton({ label, onPress, disabled = false }: PrimaryButtonProps) {
+  if (disabled) {
+    return (
+      <View style={[styles.button, styles.disabledButton]}>
+        <Text style={[styles.label, styles.disabledLabel]}>{label}</Text>
+      </View>
+    );
+  }
   return (
     <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [pressed && !disabled && styles.pressed, disabled && styles.disabled]}>
       <LinearGradient
@@ -49,6 +57,14 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.headingBold,
     fontSize: fontSize.base,
     color: colors.neutral.white,
+  },
+    disabledButton: {
+    backgroundColor: '#d1fae5',
+    shadowOpacity: 0,
+    elevation: 0,
+  },
+  disabledLabel: {
+    color: '#6ee7b7',
   },
   content: {
     flexDirection: 'row',

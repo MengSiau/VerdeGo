@@ -3,7 +3,7 @@ import { StyleSheet, Text, View } from 'react-native';
 
 import { colors, fontFamily } from '@/src/theme';
 
-type StatusIconVariant = 'danger' | 'success';
+type StatusIconVariant = 'danger' | 'success' | 'neutral';
 
 type StatusIconProps = {
   variant: StatusIconVariant;
@@ -16,6 +16,10 @@ const variantStyles: Record<StatusIconVariant, { background: string; foreground:
     foreground: colors.semantic.danger,
   },
   success: {
+    background: colors.brand.verde100,
+    foreground: colors.brand.verde600,
+  },
+  neutral: {
     background: colors.brand.verde100,
     foreground: colors.brand.verde600,
   },
