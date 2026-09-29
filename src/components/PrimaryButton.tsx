@@ -1,5 +1,4 @@
 import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, type GestureResponderEvent, View } from 'react-native';
 import type { ReactNode } from 'react';
 import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 
@@ -14,7 +13,7 @@ type PrimaryButtonProps = {
 };
 
 // Standard app-wide primary CTA: gradients.primaryCTA background, full-width, 56px min height.
-export function PrimaryButton({ label, onPress, disabled = false }: PrimaryButtonProps) {
+export function PrimaryButton({ label, onPress, icon,  disabled = false }: PrimaryButtonProps) {
   if (disabled) {
     return (
       <View style={[styles.button, styles.disabledButton]}>
