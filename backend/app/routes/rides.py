@@ -34,8 +34,6 @@ def get_rides():
             for vehicle in user_vehicles_response.data
         ]
 
-        own_vehicle_ids = []
-
         rides_response = (
             supabase
             .table("rides")
