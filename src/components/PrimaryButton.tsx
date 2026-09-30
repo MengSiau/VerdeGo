@@ -13,7 +13,7 @@ type PrimaryButtonProps = {
 };
 
 // Standard app-wide primary CTA: gradients.primaryCTA background, full-width, 56px min height.
-export function PrimaryButton({ label, onPress, disabled = false }: PrimaryButtonProps) {
+export function PrimaryButton({ label, onPress, icon, disabled = false }: PrimaryButtonProps) {
   if (disabled) {
     return (
       <View style={[styles.button, styles.disabledButton]}>
