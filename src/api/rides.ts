@@ -23,7 +23,7 @@ export interface Ride {
 
 export interface DriverSummary {
     name: string;
-    rating: number | null;
+    rating: number;
     rating_count: number;
 }
 
