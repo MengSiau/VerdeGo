@@ -14,25 +14,25 @@ supabase = create_client(
 
 @rides_bp.route("", methods=["GET"])
 def get_rides():
-    # user = get_authenticated_user()
+    user = get_authenticated_user()
 
-    # if not user:
-    #     return jsonify({"error": "Authentication required"}), 401
+    if not user:
+        return jsonify({"error": "Authentication required"}), 401
 
     try:
         # Get vehicles owned by the current user
-        # user_vehicles_response = (
-        #     supabase
-        #     .table("vehicles")
-        #     .select("vehicle_id")
-        #     .eq("user_id", user.id)
-        #     .execute()
-        # )
+        user_vehicles_response = (
+            supabase
+            .table("vehicles")
+            .select("vehicle_id")
+            .eq("user_id", user.id)
+            .execute()
+        )
 
-        # own_vehicle_ids = [
-        #     vehicle["vehicle_id"]
-        #     for vehicle in user_vehicles_response.data
-        # ]
+        own_vehicle_ids = [
+            vehicle["vehicle_id"]
+            for vehicle in user_vehicles_response.data
+        ]
 
         own_vehicle_ids = []
 
