@@ -4,19 +4,21 @@ export interface Ride {
     ride_id: string;
     vehicle_id: string;
     ride_status: 'scheduled' | 'ongoing' | 'completed' | 'cancelled';
-    origin_lat: number;
-    origin_lng: number;
-    destination_lat: number;
-    destination_lng: number;
+
+    origin: {
+        lat: number;
+        lng: number;
+    };
+
+    destination: {
+        lat: number;
+        lng: number;
+    };
+
     departure_time: string;
     price_per_passenger: number;
     seats_available: number;
     created_at: string;
-}
-
-export interface RideWithDetails extends Ride {
-    driver: DriverSummary;
-    estimate: EstimatedRideDetails;
 }
 
 export interface DriverSummary {
@@ -31,14 +33,10 @@ export interface EstimatedRideDetails {
     co2_estimate_kg: number;
 }
 
-export interface RideWithPassengers extends RideWithDetails {
-    confirmed_passengers: PassengerSummary[];
-}
-
-export interface PassengerSummary {
-    user_id: string;
-    name: string;
-    pickup: string;
+export interface RideWithDetails {
+    ride: Ride;
+    driver: DriverSummary;
+    estimate: EstimatedRideDetails;
 }
 
 export interface CreateRideRequest {
