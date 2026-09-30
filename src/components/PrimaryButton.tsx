@@ -1,7 +1,6 @@
 import { LinearGradient } from 'expo-linear-gradient';
 import { Pressable, StyleSheet, Text, type GestureResponderEvent, View } from 'react-native';
 import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from 'react-native';
 
 import { colors, fontFamily, fontSize, gradients, radius, tapTarget } from '@/src/theme';
 
