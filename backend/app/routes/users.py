@@ -1,6 +1,9 @@
+import os
+
 from flask import Blueprint, jsonify, request
 from supabase import create_client
-import os
+
+from app.auth import get_authenticated_user
 
 
 users_bp = Blueprint("users", __name__, url_prefix="/api/users")
@@ -12,42 +15,8 @@ users_bp = Blueprint("users", __name__, url_prefix="/api/users")
 
 supabase = create_client(
     os.getenv("SUPABASE_URL"),
-    os.getenv("SUPABASE_PUBLISHABLE_KEY")
-)
-
-# ============================================================
-# Helper functions
-# ============================================================
-
-def get_authenticated_user():
-    """
-    Get the currently authenticated Supabase user from the
-    Authorization header.
-
-    Returns:
-        Supabase user object if authenticated, otherwise None.
-    """
-
-    auth_header = request.headers.get("Authorization")
-
-    if not auth_header:
-        return None
-
-    if not auth_header.startswith("Bearer "):
-        return None
-
-    token = auth_header.split(" ", 1)[1]
-
-    try:
-        response = supabase.auth.get_user(token)
-        return response.user
-    except Exception:
-        return None
-
-
-@users_bp.route("/test", methods=["GET"])
-def test():
-    return jsonify({"message": "API is working!"})
+    os.getenv("SUPABASE_SECRET_KEY")
+).schema("dev")  # Use the `dev` schema for app tables
 
 
 # ============================================================
@@ -71,7 +40,6 @@ def get_current_user():
 
     response = (
         supabase
-        .schema("dev")
         .table("users")
         .select("user_id, name, created_at")
         .eq("user_id", user.id)
@@ -129,7 +97,6 @@ def update_current_user():
 
     response = (
         supabase
-        .schema("dev")
         .table("users")
         .update({
             "name": name
