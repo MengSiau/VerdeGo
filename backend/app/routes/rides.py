@@ -106,29 +106,38 @@ def get_rides():
 
         for ride in rides_response.data:
             ride_id = ride["ride_id"]
-            estimate = estimates_by_ride_id.get(ride_id) or {}
+            estimate = estimates_by_ride_id.get(ride_id, {})
 
             vehicle = vehicles_by_id[ride["vehicle_id"]]
             
             driver_id = vehicle["user_id"]
             driver = users_by_id[driver_id]
             
-            driver_rating = driver_ratings_by_id.get(driver_id)
+            driver_rating = driver_ratings_by_id.get(driver_id, 0)
             driver_rating_count = len(reviews_by_user_id.get(driver_id, []))
 
             rides.append({
-                "ride_id": ride["ride_id"],
-                "vehicle_id": ride["vehicle_id"],
-                "ride_status": ride["ride_status"],
-                "origin_lat": ride["origin_lat"],
-                "origin_lng": ride["origin_lng"],
-                "destination_lat": ride["destination_lat"],
-                "destination_lng": ride["destination_lng"],
-                "departure_time": ride["departure_time"],
-                "price_per_passenger": ride["price_per_passenger"],
-                "seats_available": ride["seats_available"],
-                "created_at": ride["created_at"],
-                
+                "ride": {
+                    "ride_id": ride["ride_id"],
+                    "vehicle_id": ride["vehicle_id"],
+                    "ride_status": ride["ride_status"],
+                    
+                    "origin": {
+                        "lat": ride["origin_lat"],
+                        "lng": ride["origin_lng"],
+                    },
+
+                    "destination": {
+                        "lat": ride["destination_lat"],
+                        "lng": ride["destination_lng"],
+                    },
+
+                    "departure_time": ride["departure_time"],
+                    "price_per_passenger": ride["price_per_passenger"],
+                    "seats_available": ride["seats_available"],
+                    "created_at": ride["created_at"]
+                },
+
                 "driver": {
                     "user_id": driver.get("user_id"),
                     "name": driver.get("name"),
