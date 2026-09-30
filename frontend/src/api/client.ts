@@ -42,7 +42,7 @@ export async function apiFetch<T>(
 
     if (!response.ok) {
         let message = `Request failed with status ${response.status}`;
-        
+
         const body = await response.text();
         console.log('API ERROR:', response.status, body);
         console.log(API_URL, path, options, headers);
