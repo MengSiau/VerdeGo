@@ -22,6 +22,8 @@ import {
   Poppins_800ExtraBold,
 } from "@expo-google-fonts/poppins";
 
+import { VehiclesProvider } from "@/src/data/TempVehicleContext";
+
 import { AuthProvider, useAuth } from "@/src/auth/AuthProvider";
 import { RidesStoreProvider } from "@/src/data/RidesStore";
 import { UserDetailStoreProvider } from "@/src/data/UserDetailStore";
@@ -117,9 +119,11 @@ export default function RootLayout() {
         </RidesStoreProvider>
       </UserDetailStoreProvider>
       <AuthProvider>
-        <RidesStoreProvider>
-          <RootNavigator />
-        </RidesStoreProvider>
+        <VehiclesProvider>
+          <RidesStoreProvider>
+            <RootNavigator />
+          </RidesStoreProvider>
+        </VehiclesProvider>
       </AuthProvider>
     </ThemeProvider>
   );
