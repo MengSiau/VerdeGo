@@ -141,7 +141,7 @@ export function Profile() {
               onPress={openEditName}
             />
             <Divider />
-            <AccountRow icon="car-outline" label="Vehicle Details" />
+            <AccountRow icon="car-outline" label="Vehicle Details" onPress= { () => router.push("/my-vehicles")} />
             <Divider />
             <AccountRow icon="card-outline" label="Payment Method" />
             <Divider />

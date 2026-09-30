@@ -106,25 +106,16 @@ export default function RootLayout() {
   }
 
   return (
-    <ThemeProvider value={DefaultTheme}>
+  <ThemeProvider value={DefaultTheme}>
+    <AuthProvider>
       <UserDetailStoreProvider>
-        <RidesStoreProvider>
-          <Stack screenOptions={{ headerShown: false }}>
-            {/* Top-level bottom-nav sections swap instantly rather than sliding in like a
-                deeper/nested screen - everything else keeps the default push animation. */}
-            <Stack.Screen name="home" options={{ animation: "none" }} />
-            <Stack.Screen name="my-rides" options={{ animation: "none" }} />
-            <Stack.Screen name="profile" options={{ animation: "none" }} />
-          </Stack>
-        </RidesStoreProvider>
-      </UserDetailStoreProvider>
-      <AuthProvider>
         <VehiclesProvider>
           <RidesStoreProvider>
             <RootNavigator />
           </RidesStoreProvider>
         </VehiclesProvider>
-      </AuthProvider>
-    </ThemeProvider>
-  );
+      </UserDetailStoreProvider>
+    </AuthProvider>
+  </ThemeProvider>
+);
 }
