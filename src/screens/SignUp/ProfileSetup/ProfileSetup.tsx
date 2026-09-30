@@ -1,18 +1,24 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { Ionicons } from "@expo/vector-icons";
+import { useLocalSearchParams, useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import { useMemo, useState } from "react";
+import { ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import { CalloutBanner } from '@/src/components/CalloutBanner';
-import { PrimaryButton } from '@/src/components/PrimaryButton';
-import { ProgressBar } from '@/src/components/ProgressBar';
-import { TextField } from '@/src/components/TextField';
-import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
-import { Button } from 'react-native';
-import { useAuth } from '@/src/auth/AuthProvider';
-
+import { useAuth } from "@/src/auth/AuthProvider";
+import { CalloutBanner } from "@/src/components/CalloutBanner";
+import { PrimaryButton } from "@/src/components/PrimaryButton";
+import { ProgressBar } from "@/src/components/ProgressBar";
+import { TextField } from "@/src/components/TextField";
+import { useUserDetailStore } from "@/src/data/UserDetailStore";
+import {
+  colors,
+  fontFamily,
+  fontSize,
+  radius,
+  screenPaddingX,
+} from "@/src/theme";
+import { Button } from "react-native";
 
 const TOTAL_STEPS = 2;
 const CURRENT_STEP = 2;
@@ -21,16 +27,14 @@ export function ProfileSetup() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { email } = useLocalSearchParams<{ email?: string }>();
+  const { updateProfile } = useUserDetailStore();
 
-  const [firstName, setFirstName] = useState('');
-  const [lastName, setLastName] = useState('');
-  const [studentId, setStudentId] = useState('');
-  const [password, setPassword] = useState('');
-  const [confirmPassword, setConfirmPassword] = useState('');
-  // inside the component
+  const [firstName, setFirstName] = useState("");
+  const [lastName, setLastName] = useState("");
+  const [studentId, setStudentId] = useState("");
+  const [password, setPassword] = useState("");
+  const [confirmPassword, setConfirmPassword] = useState("");
   const { signOut } = useAuth();
-
-
 
   // Avatar initials: first letter of first name + first letter of last name, e.g. "Priya Sharma" -> "PS".
   const initials = useMemo(() => {
@@ -41,7 +45,16 @@ export function ProfileSetup() {
 
   const handleComplete = () => {
     // TODO: submit profile to backend once auth is connected.
-    router.push('/home');
+    router.push("/home");
+    // writing the sign-up values the user typed into profile
+    updateProfile({
+      //using trim to strip accidental spaces
+      firstName: firstName.trim(),
+      lastName: lastName.trim(),
+      studentId: studentId.trim(),
+      email: email ?? "",
+    });
+    router.push("/home");
   };
 
   return (
@@ -53,7 +66,8 @@ export function ProfileSetup() {
           styles.content,
           { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 },
         ]}
-        keyboardShouldPersistTaps="handled">
+        keyboardShouldPersistTaps="handled"
+      >
         <View style={styles.header}>
           <Text style={styles.title}>Your Profile</Text>
           <Text style={styles.stepLabel}>
@@ -67,7 +81,7 @@ export function ProfileSetup() {
         <View style={styles.avatarSection}>
           <View style={styles.avatarWrap}>
             <View style={styles.avatarCircle}>
-              <Text style={styles.avatarInitials}>{initials || ''}</Text>
+              <Text style={styles.avatarInitials}>{initials || ""}</Text>
             </View>
             <View style={styles.avatarBadge}>
               <Ionicons name="add" size={16} color={colors.neutral.white} />
@@ -100,8 +114,14 @@ export function ProfileSetup() {
           <CalloutBanner
             variant="info"
             heading="Monash Verified"
-            body={email ?? ''}
-            icon={<Ionicons name="checkmark-circle" size={24} color={colors.brand.verde600} />}
+            body={email ?? ""}
+            icon={
+              <Ionicons
+                name="checkmark-circle"
+                size={24}
+                color={colors.brand.verde600}
+              />
+            }
           />
         </View>
 
@@ -112,11 +132,8 @@ export function ProfileSetup() {
         <View style={styles.fieldGroup}>
           <Button title="Sign out (temp)" onPress={signOut} />
         </View>
-        
       </ScrollView>
     </View>
-    
-    
   );
 }
 
@@ -129,9 +146,9 @@ const styles = StyleSheet.create({
     paddingHorizontal: screenPaddingX.auth,
   },
   header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
+    flexDirection: "row",
+    alignItems: "center",
+    justifyContent: "space-between",
   },
   title: {
     fontFamily: fontFamily.headingBold,
@@ -148,7 +165,7 @@ const styles = StyleSheet.create({
   },
   avatarSection: {
     marginTop: 28,
-    alignItems: 'center',
+    alignItems: "center",
   },
   avatarWrap: {
     width: 96,
@@ -161,24 +178,24 @@ const styles = StyleSheet.create({
     backgroundColor: colors.brand.verde200,
     borderWidth: 2,
     borderColor: colors.brand.verde400,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
   },
   avatarInitials: {
     fontFamily: fontFamily.headingBold,
-    fontSize: fontSize['2xl'],
+    fontSize: fontSize["2xl"],
     color: colors.brand.verde700,
   },
   avatarBadge: {
-    position: 'absolute',
+    position: "absolute",
     right: -2,
     bottom: -2,
     width: 32,
     height: 32,
     borderRadius: radius.full,
     backgroundColor: colors.brand.verde600,
-    alignItems: 'center',
-    justifyContent: 'center',
+    alignItems: "center",
+    justifyContent: "center",
     borderWidth: 2,
     borderColor: colors.neutral.white,
   },
