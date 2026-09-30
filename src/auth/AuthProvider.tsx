@@ -64,6 +64,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           queryParams: {
             // Skips Google's account picker and forces Monash SSO
             hd: 'student.monash.edu',
+            prompt: 'select_account', // forces account picker if multiple accounts are signed in
           },
         },
       });
