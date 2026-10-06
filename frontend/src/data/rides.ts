@@ -106,7 +106,29 @@ export const DUMMY_RIDES: Ride[] = [
     co2EstimateKg: 0.22,
     confirmedPassengers: [],
   },
+  {
+    id: '5',
+    driverId: 'u-priya',
+    driverName: 'Priya Sharma',
+    rating: 5,
+    ratingCount: 47,
+    pickup: 'Glen Waverley Station',
+    destination: 'Monash Clayton Campus',
+    date: 'Mon, 11 Aug 2025',
+    departureTime: '8:15 AM',
+    dropoffTimeEstimate: '8:33 AM',
+    distanceKm: 18.4,
+    seats: 2,
+    durationMinutes: 18,
+    price: 4.2,
+    co2SavedKg: 0.58,
+    co2EstimateKg: 0.27,
+    confirmedPassengers: [],
+  },
 ];
 
 // Demo data: rides the current (demo) user has confirmed - what appears in My Rides > Upcoming.
 export const MY_UPCOMING_RIDES: MyRideBooking[] = [{ rideId: '1', dateLabel: 'Tomorrow' }];
+
+// Demo data: completed rides - what appears in My Rides > Past (each can be reviewed).
+export const MY_PAST_RIDES: MyRideBooking[] = [{ rideId: '5', dateLabel: 'Mon, 11 Aug' }];

@@ -11,10 +11,13 @@ type MyRideCardProps = {
   dateLabel: string;
   role: 'driver' | 'passenger';
   onPress?: () => void;
+  /** Past rides pass this to show a review action in place of "Tap to expand". */
+  onReview?: () => void;
+  reviewed?: boolean;
 };
 
 // TODO: swap the route preview strip for a real map once map integration exists.
-export function MyRideCard({ ride, dateLabel, role, onPress }: MyRideCardProps) {
+export function MyRideCard({ ride, dateLabel, role, onPress, onReview, reviewed }: MyRideCardProps) {
   return (
     <Pressable onPress={onPress} style={styles.card}>
       <View style={styles.routePreview}>
@@ -68,7 +71,20 @@ export function MyRideCard({ ride, dateLabel, role, onPress }: MyRideCardProps) 
             </View>
             <Text style={styles.co2Text}>{ride.co2EstimateKg.toFixed(2)} kg CO2</Text>
           </View>
-          <Text style={styles.expandText}>Tap to expand ›</Text>
+          {onReview ? (
+            reviewed ? (
+              <View style={styles.reviewedPill}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.brand.verde700} />
+                <Text style={styles.reviewedText}>Reviewed</Text>
+              </View>
+            ) : (
+              <Pressable onPress={onReview} style={styles.reviewButton} accessibilityRole="button">
+                <Text style={styles.reviewButtonText}>Leave a review</Text>
+              </Pressable>
+            )
+          ) : (
+            <Text style={styles.expandText}>Tap to expand ›</Text>
+          )}
         </View>
       </View>
     </Pressable>
@@ -209,6 +225,27 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.headingSemibold,
     fontSize: fontSize.xs,
     color: colors.brand.verde600,
+  },
+  reviewButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    backgroundColor: colors.brand.verde500,
+  },
+  reviewButtonText: {
+    fontFamily: fontFamily.headingSemibold,
+    fontSize: fontSize.xs,
+    color: colors.neutral.white,
+  },
+  reviewedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  reviewedText: {
+    fontFamily: fontFamily.headingSemibold,
+    fontSize: fontSize.xs,
+    color: colors.brand.verde700,
   },
   expandText: {
     fontFamily: fontFamily.headingSemibold,
