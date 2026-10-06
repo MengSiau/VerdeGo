@@ -1,154 +1,61 @@
-import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-
+import { ComboBox } from '@/src/components/ComboBox';
 import { GreenScoreBadge } from '@/src/components/GreenScoreBadge';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { SecondaryButton } from '@/src/components/SecondaryButton';
-import { SegmentedOptions } from '@/src/components/SegmentedOptions';
-import { TextField } from '@/src/components/TextField';
+import { useVehicles } from '@/src/data/VehiclesStore';
+import { getGreenScore } from '@/src/utils/greenScore';
+import { calculateRideEmissionsKg } from '@/src/utils/rideEmissions';
 import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
-
-import { usePostRideDraft, type FuelType, type GreenScoreResult } from '../PostRideContext';
+import { usePostRideDraft, POST_RIDE_DISTANCE_KM } from '../PostRideContext';
 import { PostRideHeader } from '../PostRideHeader';
-
-// Stands in for a real saved-vehicle lookup once accounts/backend exist.
-const DEMO_VEHICLE = { make: 'Toyota', model: 'Corolla', year: '2019', fuelType: 'hybrid' as FuelType };
-
-const FUEL_TYPE_OPTIONS: { label: string; value: FuelType }[] = [
-  { label: 'Petrol', value: 'petrol' },
-  { label: 'Diesel', value: 'diesel' },
-  { label: 'Hybrid', value: 'hybrid' },
-  { label: 'Electric', value: 'electric' },
-];
-
-// Demo emissions results, keyed by fuel type - no real API wired up yet.
-const FUEL_RESULTS: Record<FuelType, GreenScoreResult> = {
-  petrol: { grade: 'C', co2Per100km: 9.2, percentBelowAverage: -8 },
-  diesel: { grade: 'B', co2Per100km: 7.6, percentBelowAverage: 10 },
-  hybrid: { grade: 'A+', co2Per100km: 1.48, percentBelowAverage: 68 },
-  electric: { grade: 'A+', co2Per100km: 0.2, percentBelowAverage: 95 },
-};
-
-const EMISSIONS_SCALE_MAX = 5; // kg CO2 / 100km treated as the "high emissions" end of the bar
 
 export function PostVehicle() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { draft, updateDraft } = usePostRideDraft();
-
-  const make = draft.vehicleMake ?? DEMO_VEHICLE.make;
-  const model = draft.vehicleModel ?? DEMO_VEHICLE.model;
-  const year = draft.vehicleYear ?? DEMO_VEHICLE.year;
-  const fuelType = draft.fuelType ?? DEMO_VEHICLE.fuelType;
-  const result = draft.greenScore;
-
-  const handleCalculate = () => {
-    updateDraft({ greenScore: FUEL_RESULTS[fuelType] });
-  };
-
-  const emissionsRatio = result ? Math.min(1, result.co2Per100km / EMISSIONS_SCALE_MAX) : 0;
-  const belowAverage = result ? result.percentBelowAverage >= 0 : false;
+  const { vehicles, loading, error, refresh } = useVehicles();
+  const vehicle = vehicles.find((item) => item.vehicle_id === draft.vehicleId);
+  const factor = vehicle?.vehicle_models?.co2_g_per_km;
+  const total = calculateRideEmissionsKg(factor, POST_RIDE_DISTANCE_KM);
 
   return (
     <View style={styles.fill}>
       <PostRideHeader title="Vehicle & Green Score" step={3} />
-
-      <ScrollView
-        style={styles.fill}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 16 }]}
-        keyboardShouldPersistTaps="handled">
-        <Text style={styles.subtitle}>
-          Your vehicle details help us calculate your <Text style={styles.subtitleBold}>Green Score</Text>{' '}
-          using sample emissions data.
-        </Text>
-
-        <View style={styles.row}>
-          <View style={styles.rowItem}>
-            <TextField label="Make" value={make} onChangeText={(text) => updateDraft({ vehicleMake: text })} />
-          </View>
-          <View style={styles.rowItem}>
-            <TextField
-              label="Model"
-              value={model}
-              onChangeText={(text) => updateDraft({ vehicleModel: text })}
-            />
-          </View>
-        </View>
-
+      <ScrollView style={styles.fill} keyboardShouldPersistTaps="handled"
+        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 16 }]}>
+        <Text style={styles.subtitle}>Select your saved vehicle to estimate journey emissions.</Text>
         <View style={styles.fieldGroup}>
-          <TextField
-            label="Year"
-            keyboardType="number-pad"
-            value={year}
-            onChangeText={(text) => updateDraft({ vehicleYear: text })}
-          />
+          <ComboBox label="Your vehicles" placeholder={loading ? 'Loading vehicles...' : 'Select a saved vehicle'}
+            value={draft.vehicleId ?? null} disabled={loading}
+            options={vehicles.map((item) => ({ value: item.vehicle_id, label: item.vehicle_models
+              ? `${item.vehicle_models.year} ${item.vehicle_models.make} ${item.vehicle_models.model} (${item.license_plate})`
+              : item.license_plate }))}
+            onChange={(vehicleId) => updateDraft({ vehicleId })} />
+          {error && <><Text style={styles.subtitle}>{error}</Text><SecondaryButton label="Retry" onPress={() => { void refresh(); }} /></>}
+          {!loading && !error && vehicles.length === 0 && <Text style={styles.subtitle}>Add a vehicle in My Vehicles before posting a ride.</Text>}
+          {vehicle && (factor == null || !Number.isFinite(factor) || factor < 0) && <Text style={styles.subtitle}>This vehicle has no usable emissions factor. Update it in My Vehicles.</Text>}
         </View>
-
-        <View style={styles.fieldGroup}>
-          <Text style={styles.label}>Fuel Type</Text>
-          <View style={styles.fuelTypeWrap}>
-            <SegmentedOptions
-              options={FUEL_TYPE_OPTIONS}
-              value={fuelType}
-              onChange={(value) => updateDraft({ fuelType: value, greenScore: undefined })}
-            />
-          </View>
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <SecondaryButton
-            variant="accent"
-            label="Calculate Green Score"
-            icon={<Ionicons name="leaf-outline" size={18} color={colors.brand.verde700} />}
-            onPress={handleCalculate}
-          />
-        </View>
-
-        {result && (
+        {total !== undefined && factor != null && (
           <View style={styles.resultCard}>
-            <View style={styles.resultHeader}>
-              <Text style={styles.resultTitle}>Green Score Result</Text>
-              <Text style={styles.resultSource}>Demo estimate</Text>
-            </View>
-
+            <Text style={styles.resultTitle}>Estimated journey emissions</Text>
             <View style={styles.resultBody}>
-              <GreenScoreBadge grade={result.grade} />
+              <GreenScoreBadge grade={getGreenScore(factor)} />
               <View style={styles.resultInfo}>
-                <Text style={styles.resultValue}>
-                  {result.co2Per100km} kg CO<Text style={styles.subscript}>2</Text>
-                </Text>
-                <Text style={styles.resultMeta}>
-                  per 100 km · {year} {make} {model} {fuelTypeLabel(fuelType)}
-                </Text>
-                <Text style={[styles.resultComparison, !belowAverage && styles.resultComparisonWorse]}>
-                  {Math.abs(result.percentBelowAverage)}%{' '}
-                  {belowAverage ? 'below average car ✓' : 'above average car'}
-                </Text>
+                <Text style={styles.resultValue}>{total.toFixed(2)} kg CO2e</Text>
+                <Text style={styles.resultMeta}>{factor} g/km × {draft.distanceKm} km</Text>
               </View>
-            </View>
-
-            <View style={styles.emissionsTrack}>
-              <View style={[styles.emissionsFill, { width: `${emissionsRatio * 100}%` }]} />
-            </View>
-            <View style={styles.emissionsLabels}>
-              <Text style={styles.emissionsLabelText}>Low emissions</Text>
-              <Text style={styles.emissionsLabelText}>High emissions</Text>
             </View>
           </View>
         )}
       </ScrollView>
-
       <View style={styles.actions}>
-        <PrimaryButton label="Next: Fare" onPress={() => router.push('/post-fare')} />
+        <PrimaryButton label="Next: Fare" disabled={loading || total === undefined} onPress={() => { updateDraft({ distanceKm: POST_RIDE_DISTANCE_KM }); router.push('/post-fare'); }} />
       </View>
     </View>
   );
-}
-
-function fuelTypeLabel(fuelType: FuelType) {
-  return fuelType.charAt(0).toUpperCase() + fuelType.slice(1);
 }
 
 const styles = StyleSheet.create({

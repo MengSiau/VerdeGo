@@ -1,6 +1,6 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useState } from 'react';
-import { FlatList, Modal, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
+import { FlatList, KeyboardAvoidingView, Modal, Platform, Pressable, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { colors, fontFamily, fontSize, radius, tapTarget } from '@/src/theme';
@@ -34,15 +34,16 @@ export function ComboBox({ label, placeholder, value, options, disabled = false,
         <Ionicons name="chevron-down" size={18} color={colors.neutral.gray500} />
       </Pressable>
       <Modal visible={open && !disabled} transparent animationType="slide" onRequestClose={() => setOpen(false)}>
-        <View style={styles.modalRoot}>
+        <KeyboardAvoidingView style={styles.modalRoot}
+          behavior={Platform.OS === 'ios' ? 'padding' : 'height'}>
           <Pressable accessibilityLabel="Close options" style={StyleSheet.absoluteFill} onPress={() => setOpen(false)} />
           <View style={[styles.sheet, { paddingBottom: insets.bottom + 20 }]}>
             <Text style={styles.heading}>{label}</Text>
             <TextInput autoFocus value={query} onChangeText={setQuery} placeholder={`Search ${label.toLowerCase()}...`}
               accessibilityLabel={`Search ${label.toLowerCase()}`} autoCorrect={false}
               placeholderTextColor={colors.neutral.gray400} style={[styles.field, styles.focused, styles.search]} />
-            <FlatList data={filterOptions(options, query)} keyExtractor={(option) => option.value}
-              keyboardShouldPersistTaps="handled" ListEmptyComponent={<Text style={styles.empty}>No matches</Text>}
+            <FlatList style={styles.options} data={filterOptions(options, query)} keyExtractor={(option) => option.value}
+              keyboardDismissMode="on-drag" keyboardShouldPersistTaps="handled" ListEmptyComponent={<Text style={styles.empty}>No matches</Text>}
               renderItem={({ item }) => (
                 <Pressable accessibilityRole="button" accessibilityState={{ selected: item.value === value }}
                   style={({ pressed }) => [styles.option, pressed && styles.pressed]}
@@ -52,7 +53,7 @@ export function ComboBox({ label, placeholder, value, options, disabled = false,
                 </Pressable>
               )} />
           </View>
-        </View>
+        </KeyboardAvoidingView>
       </Modal>
     </View>
   );
@@ -71,6 +72,7 @@ const styles = StyleSheet.create({
     paddingHorizontal: 24, paddingTop: 20, maxHeight: '70%' },
   heading: { fontFamily: fontFamily.headingSemibold, fontSize: fontSize.lg, color: colors.neutral.gray900, marginBottom: 12 },
   search: { fontFamily: fontFamily.bodyRegular, fontSize: fontSize.sm, color: colors.neutral.gray800, marginBottom: 12 },
+  options: { flexShrink: 1 },
   option: { minHeight: tapTarget.minimum, paddingVertical: 14, borderBottomWidth: 1, borderBottomColor: colors.neutral.gray100,
     flexDirection: 'row', alignItems: 'center', justifyContent: 'space-between', gap: 8 },
   pressed: { backgroundColor: colors.brand.verde50 },

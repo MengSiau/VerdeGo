@@ -1,3 +1,6 @@
+import { useVehicles } from '@/src/data/VehiclesStore';
+import { getGreenScore } from '@/src/utils/greenScore';
+import { calculateRideEmissionsKg } from '@/src/utils/rideEmissions';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
@@ -12,12 +15,12 @@ import { useRidesStore } from '@/src/data/RidesStore';
 import type { Ride } from '@/src/data/rides';
 import { colors, fontFamily, fontSize, mapBg, radius, screenPaddingX } from '@/src/theme';
 
-import { calculateFinalFarePerPassenger, DEMO_DISTANCE_KM } from '../fareCalculator';
-import { usePostRideDraft, type FuelType } from '../PostRideContext';
+import { calculateFinalFarePerPassenger } from '../fareCalculator';
+import { usePostRideDraft, POST_RIDE_DISTANCE_KM } from '../PostRideContext';
 
 const DESTINATION_LABEL = 'Monash Clayton';
 const FULL_DESTINATION = 'Monash Clayton Campus';
-const POSTED_RIDE_DURATION_MINUTES = 18; // matches the fixed demo distance used throughout fare/CO2 calcs
+const POSTED_RIDE_DURATION_MINUTES = 18; // Placeholder until route duration is available.
 
 function toStationAbbrev(place: string) {
   return place.replace(/ Station$/, ' Stn');
@@ -52,10 +55,6 @@ function toFullDateDisplay(shortDate: string | undefined) {
   return `${dow}, ${day} ${month} 2025`;
 }
 
-function fuelTypeLabel(fuelType: FuelType) {
-  return fuelType.charAt(0).toUpperCase() + fuelType.slice(1);
-}
-
 export function PostConfirm() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -66,24 +65,28 @@ export function PostConfirm() {
   const fuelType = draft.fuelType ?? 'hybrid';
   const seats = draft.seats ?? 2;
   const adjustmentPercent = draft.fareAdjustmentPercent ?? 0;
-  const greenScore = draft.greenScore;
+  const { vehicles, loading } = useVehicles();
+  const vehicle = vehicles.find((item) => item.vehicle_id === draft.vehicleId);
+  const model = vehicle?.vehicle_models;
+  const factor = model?.co2_g_per_km;
+  const distanceKm = POST_RIDE_DISTANCE_KM;
+  const co2Total = calculateRideEmissionsKg(factor, distanceKm);
+  const greenScore = factor != null && Number.isFinite(factor) && factor >= 0 ? { grade: getGreenScore(factor) } : undefined;
 
   const hourDisplay = draft.hour ? String(parseInt(draft.hour, 10)) : '8';
   const timeDisplay = `${hourDisplay}:${draft.minute ?? '15'} ${draft.period ?? 'AM'}`;
-  const vehicleDisplay = `${draft.vehicleYear ?? '2019'} ${draft.vehicleMake ?? 'Toyota'} ${draft.vehicleModel ?? 'Corolla'} ${fuelTypeLabel(fuelType)}`;
-  const fare = calculateFinalFarePerPassenger(fuelType, adjustmentPercent);
-  const co2Total = greenScore ? (greenScore.co2Per100km * DEMO_DISTANCE_KM) / 100 : undefined;
+  const vehicleDisplay = model ? `${model.year} ${model.make} ${model.model} (${vehicle?.license_plate})` : 'Select a saved vehicle';
+  const fare = calculateFinalFarePerPassenger(fuelType, adjustmentPercent, distanceKm ?? 0);
 
   const handlePostRide = () => {
+    if (loading || !vehicle || co2Total === undefined || distanceKm === undefined) {
+      Alert.alert('Vehicle and distance required', 'Select a saved vehicle with an emissions factor and enter a positive journey distance.');
+      return;
+    }
     // TODO: submit the completed ride draft to backend once it exists - for now this just
     // adds the ride to the shared in-memory store so it shows up in Home/My Rides.
     const { hours, minutes } = to24Hour(draft.hour ?? '08', draft.minute ?? '15', draft.period ?? 'AM');
     const dropoff = addMinutes(hours, minutes, POSTED_RIDE_DURATION_MINUTES);
-
-    const co2SavedKg =
-      greenScore && co2Total !== undefined
-        ? co2Total / (1 - greenScore.percentBelowAverage / 100) - co2Total
-        : 0;
 
     const newRide: Ride = {
       id: `posted-${Date.now()}`,
@@ -96,12 +99,13 @@ export function PostConfirm() {
       date: draft.date ?? 'Wed, Aug 13',
       departureTime: timeDisplay,
       dropoffTimeEstimate: to12HourDisplay(dropoff.hours, dropoff.minutes),
-      distanceKm: DEMO_DISTANCE_KM,
+      distanceKm,
+      vehicleId: vehicle.vehicle_id,
       seats,
       durationMinutes: POSTED_RIDE_DURATION_MINUTES,
       price: fare,
-      co2SavedKg: Math.max(0, co2SavedKg),
-      co2EstimateKg: co2Total ?? 0,
+      co2SavedKg: 0,
+      co2EstimateKg: co2Total,
       confirmedPassengers: [],
     };
 
@@ -174,13 +178,14 @@ export function PostConfirm() {
           <SummaryRow label="Date" value={toFullDateDisplay(draft.date)} />
           <SummaryRow label="Time" value={timeDisplay} />
           <SummaryRow label="Seats" value={`${seats} available`} />
+          <SummaryRow label="Distance" value={`${distanceKm ?? 0} km`} />
           <SummaryRow label="Vehicle" value={vehicleDisplay} />
           <SummaryRow label="Fare per passenger" value={`$${fare.toFixed(2)}`} />
           <SummaryRow
             label="Green Score"
             value={
               greenScore && co2Total !== undefined
-                ? `${greenScore.grade} · ${co2Total.toFixed(2)} kg CO2`
+                ? `${greenScore.grade} · ${co2Total.toFixed(2)} kg CO2e`
                 : 'Not calculated'
             }
             last
@@ -196,7 +201,7 @@ export function PostConfirm() {
       </View>
 
       <View style={styles.actions}>
-        <PrimaryButton label="Post Ride" onPress={handlePostRide} />
+        <PrimaryButton label="Post Ride" disabled={loading || co2Total === undefined} onPress={handlePostRide} />
         <View style={styles.actionGap} />
         <SecondaryButton variant="destructive" label="Cancel Ride" onPress={handleCancel} />
       </View>
