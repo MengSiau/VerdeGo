@@ -21,7 +21,7 @@ type RoleFilter = 'all' | 'driving' | 'riding';
 export function MyRides() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { rides, myBookings } = useRidesStore();
+  const { rides, myBookings, myPastBookings, reviews } = useRidesStore();
   const [tab, setTab] = useState<RidesTab>('upcoming');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
 
@@ -41,6 +41,15 @@ export function MyRides() {
     // Rides you're driving surface first - it's your own posting, not just something you joined.
     return filtered.sort((a, b) => (a.role === b.role ? 0 : a.role === 'driver' ? -1 : 1));
   }, [rides, myBookings, roleFilter]);
+
+  const pastRides = useMemo(() => {
+    const entries: { booking: MyRideBooking; ride: Ride; role: 'driver' | 'passenger' }[] = [];
+    for (const booking of myPastBookings) {
+      const ride = rides.find((r) => r.id === booking.rideId);
+      if (ride) entries.push({ booking, ride, role: ride.driverId === CURRENT_USER_ID ? 'driver' : 'passenger' });
+    }
+    return entries;
+  }, [rides, myPastBookings]);
 
   return (
     <View style={styles.fill}>
@@ -94,6 +103,19 @@ export function MyRides() {
               </View>
             </View>
           </>
+        ) : pastRides.length > 0 ? (
+          <View style={styles.cardsList}>
+            {pastRides.map(({ booking, ride, role }) => (
+              <MyRideCard
+                key={ride.id}
+                ride={ride}
+                dateLabel={booking.dateLabel}
+                role={role}
+                onReview={() => router.push(`/post-review/${ride.id}`)}
+                reviewed={!!reviews[ride.id]}
+              />
+            ))}
+          </View>
         ) : (
           <View style={styles.emptyState}>
             <Ionicons name="time-outline" size={20} color={colors.neutral.gray400} />
