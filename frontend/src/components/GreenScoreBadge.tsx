@@ -1,6 +1,6 @@
 import { StyleSheet, Text, View } from 'react-native';
 
-import type { GreenScoreGrade } from '@/src/screens/PostRide/PostRideContext';
+import type { GreenScoreGrade } from '@/src/utils/greenScore';
 import { colors, fontFamily, fontSize, radius } from '@/src/theme';
 
 const GRADE_COLORS: Record<GreenScoreGrade, string> = {

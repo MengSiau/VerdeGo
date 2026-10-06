@@ -23,7 +23,7 @@ const FUEL_TYPE_OPTIONS: { label: string; value: FuelType }[] = [
   { label: 'Electric', value: 'electric' },
 ];
 
-// Demo Carbon Interface results, keyed by fuel type - no real API wired up yet.
+// Demo emissions results, keyed by fuel type - no real API wired up yet.
 const FUEL_RESULTS: Record<FuelType, GreenScoreResult> = {
   petrol: { grade: 'C', co2Per100km: 9.2, percentBelowAverage: -8 },
   diesel: { grade: 'B', co2Per100km: 7.6, percentBelowAverage: 10 },
@@ -61,7 +61,7 @@ export function PostVehicle() {
         keyboardShouldPersistTaps="handled">
         <Text style={styles.subtitle}>
           Your vehicle details help us calculate your <Text style={styles.subtitleBold}>Green Score</Text>{' '}
-          using Carbon Interface data.
+          using sample emissions data.
         </Text>
 
         <View style={styles.row}>
@@ -110,7 +110,7 @@ export function PostVehicle() {
           <View style={styles.resultCard}>
             <View style={styles.resultHeader}>
               <Text style={styles.resultTitle}>Green Score Result</Text>
-              <Text style={styles.resultSource}>via Carbon Interface</Text>
+              <Text style={styles.resultSource}>Demo estimate</Text>
             </View>
 
             <View style={styles.resultBody}>

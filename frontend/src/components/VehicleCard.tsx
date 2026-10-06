@@ -20,9 +20,9 @@ export function VehicleCard({ vehicle, onEdit, onRemove }: VehicleCardProps) {
         </Text>
       </View>
       <Text style={styles.meta}>{vehicle.license_plate}</Text>
-      {vehicle.vehicle_models && (
+      {vehicle.vehicle_models?.co2_g_per_km != null && (
         <Text style={styles.meta}>
-          CO2 emissions: {vehicle.vehicle_models.co2_g_per_km} g/km
+          CO2e emissions: {vehicle.vehicle_models.co2_g_per_km} g/km
         </Text>
       )}
 

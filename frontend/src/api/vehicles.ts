@@ -5,7 +5,28 @@ export interface VehicleModel {
     make: string;
     model: string;
     year: number;
+    co2_g_per_km: number | null;
+}
+
+export interface VehicleMake {
+    make_id: string;
+    name: string;
+}
+
+export interface VehicleEmissions {
+    model_id: string;
+    distance_km: number;
     co2_g_per_km: number;
+    carbon_g: number;
+    carbon_kg: number;
+}
+
+export function getVehicleMakes(): Promise<VehicleMake[]> {
+    return apiFetch<VehicleMake[]>('/api/vehicles/makes');
+}
+
+export interface VehicleCatalogueModel extends Omit<VehicleModel, 'year'> {
+    year: number | null;
 }
 
 export interface Vehicle {
@@ -30,8 +51,21 @@ export function getVehicles(): Promise<VehicleWithDetails[]> {
     return apiFetch<VehicleWithDetails[]>('/api/vehicles');
 }
 
-export function getVehicleModels(): Promise<VehicleModel[]> {
-    return apiFetch<VehicleModel[]>('/api/vehicles/models');
+export function getVehicleModels(make: string): Promise<VehicleCatalogueModel[]> {
+    return apiFetch<VehicleCatalogueModel[]>(`/api/vehicles/models?make=${encodeURIComponent(make)}`);
+}
+
+export function getModelEmissions(modelId: string, year: number, make: string, model: string): Promise<VehicleModel> {
+    return apiFetch<VehicleModel>(`/api/vehicles/models/${modelId}/emissions`, {
+        method: 'POST', body: JSON.stringify({ year, make, model }),
+    });
+}
+
+export function estimateVehicleEmissions(modelId: string, distanceKm: number): Promise<VehicleEmissions> {
+    return apiFetch<VehicleEmissions>('/api/vehicles/emissions', {
+        method: 'POST',
+        body: JSON.stringify({ model_id: modelId, distance_km: distanceKm }),
+    });
 }
 
 export function addVehicle(data: VehicleRequest): Promise<Vehicle> {

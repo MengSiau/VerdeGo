@@ -106,6 +106,7 @@ EXPO_PUBLIC_API_URL=http://YOUR_LOCAL_IP:5001
 ```env
 SUPABASE_URL=your_supabase_url
 SUPABASE_SECRET_KEY=your_supabase_secret_key
+CARBONSUTRA_API_KEY=your_carbonsutra_key
 ```
 
 > Never commit `.env` files or the Supabase secret key.

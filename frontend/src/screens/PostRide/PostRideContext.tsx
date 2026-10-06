@@ -14,7 +14,8 @@ The usePostRideDraft hook is used to access the context and update the draft rid
 */
 
 export type FuelType = "petrol" | "diesel" | "hybrid" | "electric";
-export type GreenScoreGrade = "A+" | "A" | "B" | "C";
+import type { GreenScoreGrade } from '@/src/utils/greenScore';
+export type { GreenScoreGrade } from '@/src/utils/greenScore';
 
 export type GreenScoreResult = {
   grade: GreenScoreGrade;

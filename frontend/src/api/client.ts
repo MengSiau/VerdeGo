@@ -44,11 +44,9 @@ export async function apiFetch<T>(
         let message = `Request failed with status ${response.status}`;
 
         const body = await response.text();
-        console.log('API ERROR:', response.status, body);
-        console.log(API_URL, path, options, headers);
 
         try {
-            const error = await response.json();
+            const error = JSON.parse(body);
             message = error.error ?? message;
         } catch {
             // Response wasn't JSON

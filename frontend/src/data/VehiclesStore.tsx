@@ -8,12 +8,11 @@ export type VehicleInput = api.VehicleRequest;
 
 type VehiclesContextValue = {
   vehicles: Vehicle[];
-  models: api.VehicleModel[];
   loading: boolean;
   error: string | null;
   refresh: () => Promise<void>;
-  addVehicle: (input: VehicleInput) => Promise<void>;
-  updateVehicle: (id: string, input: VehicleInput) => Promise<void>;
+  addVehicle: (input: VehicleInput, model: api.VehicleModel) => Promise<void>;
+  updateVehicle: (id: string, input: VehicleInput, model: api.VehicleModel) => Promise<void>;
   removeVehicle: (id: string) => Promise<void>;
 };
 
@@ -29,7 +28,6 @@ export function VehiclesProvider({ children }: { children: ReactNode }) {
 
 function AccountVehiclesProvider({ children, signedIn }: { children: ReactNode; signedIn: boolean }) {
   const [vehicles, setVehicles] = useState<Vehicle[]>([]);
-  const [models, setModels] = useState<api.VehicleModel[]>([]);
   const [loading, setLoading] = useState(signedIn);
   const [error, setError] = useState<string | null>(null);
   const active = useRef(true);
@@ -41,10 +39,9 @@ function AccountVehiclesProvider({ children, signedIn }: { children: ReactNode; 
     setLoading(true);
     setError(null);
     try {
-      const [savedVehicles, savedModels] = await Promise.all([api.getVehicles(), api.getVehicleModels()]);
+      const savedVehicles = await api.getVehicles();
       if (active.current && id === requestId.current) {
         setVehicles(savedVehicles);
-        setModels(savedModels);
       }
     } catch (e) {
       if (active.current && id === requestId.current) {
@@ -61,28 +58,23 @@ function AccountVehiclesProvider({ children, signedIn }: { children: ReactNode; 
     return () => { active.current = false; ++requestId.current; };
   }, [refresh]);
 
-  const withModel = useCallback((vehicle: api.Vehicle): Vehicle => {
-    const model = models.find((item) => item.model_id === vehicle.model_id);
-    return { ...vehicle, vehicle_models: model ?? null };
-  }, [models]);
-
-  const addVehicle = useCallback(async (input: VehicleInput) => {
+  const addVehicle = useCallback(async (input: VehicleInput, model: api.VehicleModel) => {
     const saved = await api.addVehicle(input);
     if (active.current) {
       ++requestId.current;
       setLoading(false);
-      setVehicles((current) => [withModel(saved), ...current]);
+      setVehicles((current) => [{ ...saved, vehicle_models: model }, ...current]);
     }
-  }, [withModel]);
+  }, []);
 
-  const updateVehicle = useCallback(async (id: string, input: VehicleInput) => {
+  const updateVehicle = useCallback(async (id: string, input: VehicleInput, model: api.VehicleModel) => {
     const saved = await api.updateVehicle(id, input);
     if (active.current) {
       ++requestId.current;
       setLoading(false);
-      setVehicles((current) => current.map((vehicle) => vehicle.vehicle_id === id ? withModel(saved) : vehicle));
+      setVehicles((current) => current.map((vehicle) => vehicle.vehicle_id === id ? { ...saved, vehicle_models: model } : vehicle));
     }
-  }, [withModel]);
+  }, []);
 
   const removeVehicle = useCallback(async (id: string) => {
     await api.deleteVehicle(id);
@@ -93,8 +85,8 @@ function AccountVehiclesProvider({ children, signedIn }: { children: ReactNode; 
     }
   }, []);
 
-  const value = useMemo(() => ({ vehicles, models, loading, error, refresh, addVehicle, updateVehicle, removeVehicle }),
-    [vehicles, models, loading, error, refresh, addVehicle, updateVehicle, removeVehicle]);
+  const value = useMemo(() => ({ vehicles, loading, error, refresh, addVehicle, updateVehicle, removeVehicle }),
+    [vehicles, loading, error, refresh, addVehicle, updateVehicle, removeVehicle]);
   return <VehiclesContext.Provider value={value}>{children}</VehiclesContext.Provider>;
 }
 
