@@ -22,7 +22,7 @@ import {
   Poppins_800ExtraBold,
 } from "@expo-google-fonts/poppins";
 
-import { VehiclesProvider } from "@/src/data/TempVehicleContext";
+import { VehiclesProvider } from "@/src/data/VehiclesStore";
 
 import { AuthProvider, useAuth } from "@/src/auth/AuthProvider";
 import { RidesStoreProvider } from "@/src/data/RidesStore";
