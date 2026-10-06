@@ -149,6 +149,16 @@ export function Profile() {
           </Card>
         </Section>
 
+        <Section title="Reviews">
+          <Card>
+            <AccountRow
+              icon="star-outline"
+              label="View your reviews"
+              onPress={() => router.push("/reviews")}
+            />
+          </Card>
+        </Section>
+
         <Section title="Notifications">
           <Card>
             <View style={styles.switchRow}>
