@@ -22,15 +22,17 @@ export interface Ride {
 }
 
 export interface DriverSummary {
+    user_id: string;
     name: string;
     rating: number;
     rating_count: number;
 }
 
 export interface EstimatedRideDetails {
-    distance_km: number;
-    duration_min: number;
-    co2_estimate_kg: number;
+    // null when the ride has no route_estimates row yet (e.g. just created, before that's wired up).
+    distance_km: number | null;
+    duration_min: number | null;
+    co2_estimate_kg: number | null;
 }
 
 export interface RideWithDetails {
@@ -52,6 +54,10 @@ export interface CreateRideRequest {
 
 export function getRides(): Promise<RideWithDetails[]> {
     return apiFetch<RideWithDetails[]>('/api/rides');
+}
+
+export function getRide(rideId: string): Promise<RideWithDetails> {
+    return apiFetch<RideWithDetails>(`/api/rides/${rideId}`);
 }
 
 export function createRide(data: CreateRideRequest): Promise<Ride> {

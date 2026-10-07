@@ -33,14 +33,16 @@ function addMinutes(iso: string, minutes: number) {
 //   fabricated number, until that comparison is computed server-side.
 // - `seats` here is actually "seats still available" (that's all the backend returns),
 //   not the vehicle's total seat count.
+// - distance/duration/CO2 fall back to 0 when the ride has no route_estimates row yet
+//   (e.g. posted before that part of create_ride is wired up) - a placeholder, not a claim.
 export function mapRideWithDetailsToRide(item: RideWithDetails): Ride {
   const { ride, driver, estimate } = item;
-  const durationMinutes = Math.round(estimate.duration_min);
+  const durationMinutes = Math.round(estimate.duration_min ?? 0);
 
   return {
     id: ride.ride_id,
     vehicleId: ride.vehicle_id,
-    driverId: ride.vehicle_id, // backend doesn't return the driver's user id on this endpoint
+    driverId: driver.user_id,
     driverName: driver.name,
     rating: driver.rating,
     ratingCount: driver.rating_count,
@@ -49,12 +51,12 @@ export function mapRideWithDetailsToRide(item: RideWithDetails): Ride {
     date: formatDate(ride.departure_time),
     departureTime: formatTime(ride.departure_time),
     dropoffTimeEstimate: formatTime(addMinutes(ride.departure_time, durationMinutes)),
-    distanceKm: estimate.distance_km,
+    distanceKm: estimate.distance_km ?? 0,
     seats: ride.seats_available,
     durationMinutes,
     price: ride.price_per_passenger,
-    co2SavedKg: estimate.co2_estimate_kg,
-    co2EstimateKg: estimate.co2_estimate_kg,
+    co2SavedKg: estimate.co2_estimate_kg ?? 0,
+    co2EstimateKg: estimate.co2_estimate_kg ?? 0,
     confirmedPassengers: [],
   };
 }
