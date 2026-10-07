@@ -12,6 +12,16 @@ supabase = create_client(
     os.getenv("SUPABASE_SECRET_KEY")
 ).schema("dev")
 
+'''
+GET /api/rides
+
+Returns a list of rides that are scheduled and not owned by the current user.
+Each ride includes:
+- Ride details (origin, destination, departure time, price, seats available)
+- Driver details (name, rating, rating count)
+
+Usage: To be used in the mainfeed (the home page). 
+'''
 @rides_bp.route("", methods=["GET"])
 def get_rides():
     user = get_authenticated_user()
@@ -154,6 +164,23 @@ def get_rides():
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
+
+'''
+POST /api/rides
+Creates a new ride for the authenticated user.
+Request body should include:
+- vehicle_id: ID of the vehicle to be used for the ride
+- origin_lat: Latitude of the origin
+- origin_lng: Longitude of the origin
+- destination_lat: Latitude of the destination
+- destination_lng: Longitude of the destination
+- departure_time: Scheduled departure time (ISO 8601 format)
+- price_per_passenger: Price per passenger for the ride
+- seats_available: Number of available seats for the ride
+Returns the created ride details on success.
+
+Usage: To be used when a user wants to create a new ride offer.
+'''
 
 @rides_bp.route("", methods=["POST"])
 def create_ride():

@@ -3,14 +3,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View, Button } from 'react-native';
+import { ActivityIndicator, Button, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { BottomNav } from '@/src/components/BottomNav';
 import { FilterChips } from '@/src/components/FilterChips';
+import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { RideCard } from '@/src/components/RideCard';
-import { CURRENT_USER_ID } from '@/src/data/currentUser';
-import { useRidesStore } from '@/src/data/RidesStore';
+import { useBrowseRides } from '@/src/hooks/useBrowseRides';
 import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
 
 type SortFilter = 'eco' | 'cost' | 'time';
@@ -24,18 +24,13 @@ const SORT_LABEL: Record<SortFilter, string> = {
 export function Home() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { rides } = useRidesStore();
+  const { rides, loading, error, refresh } = useBrowseRides();
   const [sort, setSort] = useState<SortFilter>('eco');
   const { signOut } = useAuth();
 
-  // Don't show the viewer their own posted rides in the browse feed - you wouldn't
-  // request to join a ride you're the one offering.
-  const browsableRides = useMemo(() => rides.filter((ride) => ride.driverId !== CURRENT_USER_ID), [rides]);
-
-  const totalCo2Saved = useMemo(
-    () => browsableRides.reduce((sum, ride) => sum + ride.co2SavedKg, 0),
-    [browsableRides]
-  );
+  // The backend's GET /api/rides already excludes the caller's own vehicles, so no
+  // client-side filtering is needed here (unlike the old local demo data).
+  const totalCo2Saved = useMemo(() => rides.reduce((sum, ride) => sum + ride.co2SavedKg, 0), [rides]);
 
   return (
     <View style={styles.fill}>
@@ -67,19 +62,38 @@ export function Home() {
             onChange={setSort}
           />
           <Text style={styles.resultsText}>
-            {browsableRides.length} rides available · sorted by {SORT_LABEL[sort]}
+            {rides.length} rides available · sorted by {SORT_LABEL[sort]}
           </Text>
         </View>
         <Button title="Temp Sign Out" onPress={signOut} />
-        
-        <ScrollView
-          style={styles.fill}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}>
-          {browsableRides.map((ride) => (
-            <RideCard key={ride.id} ride={ride} onPress={() => router.push(`/ride-details/${ride.id}`)} />
-          ))}
-        </ScrollView>
+
+        {loading && rides.length === 0 ? (
+          <View style={styles.centeredState}>
+            <ActivityIndicator size="large" color={colors.brand.verde600} />
+          </View>
+        ) : error ? (
+          <View style={styles.centeredState}>
+            <Text style={styles.errorTitle}>Unable to load rides</Text>
+            <Text style={styles.errorSubtitle}>{error}</Text>
+            <View style={styles.errorButton}>
+              <PrimaryButton label="Try Again" onPress={() => void refresh()} />
+            </View>
+          </View>
+        ) : rides.length === 0 ? (
+          <View style={styles.centeredState}>
+            <Text style={styles.errorTitle}>No rides available yet</Text>
+            <Text style={styles.errorSubtitle}>Check back soon, or be the first to post one.</Text>
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.fill}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}>
+            {rides.map((ride) => (
+              <RideCard key={ride.id} ride={ride} onPress={() => router.push(`/ride-details/${ride.id}`)} />
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       <BottomNav active="feed" />
@@ -153,5 +167,27 @@ const styles = StyleSheet.create({
     paddingTop: 12,
     paddingBottom: 20,
     gap: 12,
+  },
+  centeredState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: screenPaddingX.standard,
+    gap: 8,
+  },
+  errorTitle: {
+    fontFamily: fontFamily.headingSemibold,
+    fontSize: fontSize.base,
+    color: colors.neutral.gray800,
+  },
+  errorSubtitle: {
+    fontFamily: fontFamily.bodyRegular,
+    fontSize: fontSize.sm,
+    color: colors.neutral.gray500,
+    textAlign: 'center',
+  },
+  errorButton: {
+    marginTop: 12,
+    alignSelf: 'stretch',
   },
 });
