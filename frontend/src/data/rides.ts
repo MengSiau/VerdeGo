@@ -1,3 +1,5 @@
+import { CURRENT_USER_ID, CURRENT_USER_NAME } from './currentUser';
+
 export type Passenger = {
   name: string;
   pickup: string;
@@ -126,6 +128,25 @@ export const DUMMY_RIDES: Ride[] = [
     co2EstimateKg: 0.27,
     confirmedPassengers: [],
   },
+  {
+    id: '6',
+    driverId: CURRENT_USER_ID,
+    driverName: CURRENT_USER_NAME,
+    rating: 5,
+    ratingCount: 0,
+    pickup: 'Glen Waverley Station',
+    destination: 'Monash Clayton Campus',
+    date: 'Wed, 13 Aug 2025',
+    departureTime: '8:15 AM',
+    dropoffTimeEstimate: '8:33 AM',
+    distanceKm: 18.4,
+    seats: 1,
+    durationMinutes: 18,
+    price: 4.2,
+    co2SavedKg: 0.58,
+    co2EstimateKg: 0.27,
+    confirmedPassengers: [],
+  },
 ];
 
 // Demo data: rides the current (demo) user has confirmed - what appears in My Rides > Upcoming.
@@ -133,3 +154,7 @@ export const MY_UPCOMING_RIDES: MyRideBooking[] = [{ rideId: '1', dateLabel: 'To
 
 // Demo data: completed rides - what appears in My Rides > Past (each can be reviewed).
 export const MY_PAST_RIDES: MyRideBooking[] = [{ rideId: '5', dateLabel: 'Mon, 11 Aug' }];
+
+// The ride the current (demo) user is driving - shows under My Rides > Driving,
+// and is the ride the dummy passenger requests reference.
+export const MY_DRIVING_RIDES: MyRideBooking[] = [{ rideId: '6', dateLabel: 'Wed, 13 Aug' }];
