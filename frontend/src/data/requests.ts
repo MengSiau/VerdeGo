@@ -26,4 +26,12 @@ export const DUMMY_REQUESTS: PassengerRequest[] = [
     pickup: 'Waverley Park',
     pickupTime: '8:15 AM',
   },
+  {
+    id: 'req-3',
+    rideId: '7',
+    passengerName: 'Ben Liu',
+    rating: 4,
+    pickup: 'Brandon Park',
+    pickupTime: '8:55 AM',
+  },
 ];
