@@ -171,6 +171,154 @@ def get_rides():
         return jsonify({"error": str(e)}), 500
 
 '''
+GET /api/rides/mine
+
+Returns every ride the current user is involved in, as either a driver (rides on a
+vehicle they own) or a passenger (ride_passengers rows with status 'accepted' or
+'completed' - not 'requested', 'rejected' or 'cancelled', since those aren't a real
+booking). Each entry has the same {ride, driver, estimate} shape as the other endpoints,
+plus "role" ("driver" | "passenger") so the client doesn't have to re-derive it, and
+"passenger_status" on passenger-side entries.
+
+Note: registered before /<ride_id> in this file, but Werkzeug matches literal path
+segments before variable ones regardless of declaration order, so "/mine" will never be
+swallowed as a ride_id lookup.
+
+Usage: To be used by the My Rides screen.
+'''
+@rides_bp.route("/mine", methods=["GET"])
+def get_my_rides():
+    user = get_authenticated_user()
+
+    if not user:
+        return jsonify({"error": "Authentication required"}), 401
+
+    try:
+        # Driver side: rides on any vehicle I own.
+        my_vehicles_response = (
+            supabase
+            .table("vehicles")
+            .select("vehicle_id")
+            .eq("user_id", user.id)
+            .execute()
+        )
+        my_vehicle_ids = [v["vehicle_id"] for v in my_vehicles_response.data]
+
+        driver_rides = []
+        if my_vehicle_ids:
+            driver_rides_response = (
+                supabase
+                .table("rides")
+                .select("*")
+                .in_("vehicle_id", my_vehicle_ids)
+                .execute()
+            )
+            driver_rides = driver_rides_response.data
+
+        # Passenger side: rides I've been accepted onto (or completed).
+        my_passenger_rows_response = (
+            supabase
+            .table("ride_passengers")
+            .select("ride_id, ride_passenger_status")
+            .eq("passenger_id", user.id)
+            .in_("ride_passenger_status", ["accepted", "completed"])
+            .execute()
+        )
+        my_passenger_rows = my_passenger_rows_response.data
+        passenger_status_by_ride_id = {
+            row["ride_id"]: row["ride_passenger_status"]
+            for row in my_passenger_rows
+        }
+        passenger_ride_ids = list(passenger_status_by_ride_id.keys())
+
+        passenger_rides = []
+        if passenger_ride_ids:
+            passenger_rides_response = (
+                supabase
+                .table("rides")
+                .select("*")
+                .in_("ride_id", passenger_ride_ids)
+                .execute()
+            )
+            passenger_rides = passenger_rides_response.data
+
+        all_rides = driver_rides + passenger_rides
+        all_ride_ids = [ride["ride_id"] for ride in all_rides]
+        all_vehicle_ids = list({ride["vehicle_id"] for ride in all_rides})
+
+        vehicles_by_id = {}
+        if all_vehicle_ids:
+            vehicles_response = (
+                supabase
+                .table("vehicles")
+                .select("*")
+                .in_("vehicle_id", all_vehicle_ids)
+                .execute()
+            )
+            vehicles_by_id = {v["vehicle_id"]: v for v in vehicles_response.data}
+
+        driver_ids = list({v["user_id"] for v in vehicles_by_id.values()})
+
+        users_by_id = {}
+        reviews_by_user_id = {}
+        if driver_ids:
+            users_response = (
+                supabase
+                .table("users")
+                .select("user_id, name")
+                .in_("user_id", driver_ids)
+                .execute()
+            )
+            users_by_id = {u["user_id"]: u for u in users_response.data}
+
+            reviews_response = (
+                supabase
+                .table("reviews")
+                .select("reviewee_id, rating")
+                .in_("reviewee_id", driver_ids)
+                .execute()
+            )
+            for review in reviews_response.data:
+                reviews_by_user_id.setdefault(review["reviewee_id"], []).append(review["rating"])
+
+        estimates_by_ride_id = {}
+        if all_ride_ids:
+            estimates_response = (
+                supabase
+                .table("route_estimates")
+                .select("*")
+                .in_("ride_id", all_ride_ids)
+                .execute()
+            )
+            estimates_by_ride_id = {e["ride_id"]: e for e in estimates_response.data}
+
+        def build_entry(ride, role, passenger_status=None):
+            vehicle = vehicles_by_id.get(ride["vehicle_id"], {})
+            driver_id = vehicle.get("user_id")
+            driver = users_by_id.get(driver_id, {})
+            ratings = reviews_by_user_id.get(driver_id, [])
+            driver_rating = sum(ratings) / len(ratings) if ratings else 0
+            driver_rating_count = len(ratings)
+            estimate = estimates_by_ride_id.get(ride["ride_id"], {})
+
+            entry = _serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate)
+            entry["role"] = role
+            if passenger_status:
+                entry["passenger_status"] = passenger_status
+            return entry
+
+        results = [build_entry(ride, "driver") for ride in driver_rides]
+        results += [
+            build_entry(ride, "passenger", passenger_status_by_ride_id.get(ride["ride_id"]))
+            for ride in passenger_rides
+        ]
+
+        return jsonify(results), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+'''
 GET /api/rides/<ride_id>
 
 Returns a single ride by id, in the same {ride, driver, estimate} shape as the list

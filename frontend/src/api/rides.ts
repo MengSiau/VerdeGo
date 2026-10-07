@@ -41,6 +41,12 @@ export interface RideWithDetails {
     estimate: EstimatedRideDetails;
 }
 
+export interface MyRideWithDetails extends RideWithDetails {
+    role: 'driver' | 'passenger';
+    // Only present when role is 'passenger'.
+    passenger_status?: 'requested' | 'accepted' | 'rejected' | 'cancelled' | 'completed';
+}
+
 export interface CreateRideRequest {
     vehicle_id: string;
     origin_lat: number;
@@ -58,6 +64,10 @@ export function getRides(): Promise<RideWithDetails[]> {
 
 export function getRide(rideId: string): Promise<RideWithDetails> {
     return apiFetch<RideWithDetails>(`/api/rides/${rideId}`);
+}
+
+export function getMyRides(): Promise<MyRideWithDetails[]> {
+    return apiFetch<MyRideWithDetails[]>('/api/rides/mine');
 }
 
 export function createRide(data: CreateRideRequest): Promise<Ride> {
