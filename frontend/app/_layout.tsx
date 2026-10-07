@@ -75,6 +75,7 @@ function RootNavigator() {
           deeper/nested screen - everything else keeps the default push animation. */}
       <Stack.Screen name="home" options={{ animation: "none" }} />
       <Stack.Screen name="my-rides" options={{ animation: "none" }} />
+      <Stack.Screen name="requests" options={{ animation: "none" }} />
     </Stack>
   );
 }
