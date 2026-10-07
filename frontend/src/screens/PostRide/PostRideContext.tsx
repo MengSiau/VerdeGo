@@ -13,27 +13,22 @@ The PostRideProvider wraps the entire post-a-ride flow, allowing the draft ride 
 The usePostRideDraft hook is used to access the context and update the draft ride state across different screens in the Post Ride flow.
 */
 
-export type FuelType = "petrol" | "diesel" | "hybrid" | "electric";
-export type GreenScoreGrade = "A+" | "A" | "B" | "C";
+// Temporary journey distance until routing is connected.
+export const POST_RIDE_DISTANCE_KM = 18.4;
 
-export type GreenScoreResult = {
-  grade: GreenScoreGrade;
-  co2Per100km: number;
-  percentBelowAverage: number;
-};
+export type FuelType = "petrol" | "diesel" | "hybrid" | "electric";
+export type { GreenScoreGrade } from '@/src/utils/greenScore';
 
 export type PostRideDraft = {
+  vehicleId?: string;
+  distanceKm?: number;
   pickup?: string;
   date?: string; // e.g. "Wed, Aug 13"
   hour?: string; // "08"
   minute?: string; // "15"
   period?: "AM" | "PM";
   seats?: number;
-  vehicleMake?: string;
-  vehicleModel?: string;
-  vehicleYear?: string;
   fuelType?: FuelType;
-  greenScore?: GreenScoreResult;
   fareAdjustmentPercent?: number; // -20 to 20, driver's adjustment vs the calculated fare
 };
 
@@ -46,7 +41,7 @@ const PostRideContext = createContext<PostRideContextValue | null>(null);
 
 // This context is used to manage the state of the post ride draft across different screens in the Post Ride flow.
 export function PostRideProvider({ children }: { children: ReactNode }) {
-  const [draft, setDraft] = useState<PostRideDraft>({});
+  const [draft, setDraft] = useState<PostRideDraft>({ distanceKm: POST_RIDE_DISTANCE_KM });
   const value = useMemo(
     () => ({
       draft,

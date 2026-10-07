@@ -1,225 +1,230 @@
-import { Ionicons, MaterialCommunityIcons } from '@expo/vector-icons';
+import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useEffect, useRef, useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { CalloutBanner } from '@/src/components/CalloutBanner';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
-import { SelectField } from '@/src/components/SelectField';
+import { ComboBox } from '@/src/components/ComboBox';
+import { GreenScoreBadge } from '@/src/components/GreenScoreBadge';
+import { getVehicleMakes, getVehicleModels, getModelEmissions, type VehicleMake, type VehicleModel, type VehicleCatalogueModel } from '@/src/api/vehicles';
+import { getGreenScore } from '@/src/utils/greenScore';
 import { TextField } from '@/src/components/TextField';
-import { type FuelType, useVehicles } from '@/src/data/TempVehicleContext';
-import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX, tapTarget } from '@/src/theme';
-
-const MAKES = [
-  'Toyota',
-  'Honda',
-  'Mazda',
-  'Hyundai',
-  'Kia',
-  'Ford',
-  'Nissan',
-  'Subaru',
-  'Mitsubishi',
-  'Volkswagen',
-  'BMW',
-  'Mercedes-Benz',
-  'Audi',
-  'Tesla',
-  'Other',
-];
-
-const SEATS = ['2', '4', '5', '6', '7', '8'];
-
-const CURRENT_YEAR = new Date().getFullYear();
-const YEARS = Array.from({ length: 25 }, (_, i) => String(CURRENT_YEAR - i));
-
-const FUEL_TYPES: FuelType[] = ['Petrol', 'Diesel', 'Hybrid', 'Electric'];
-
-const FUEL_ACCENT_COLOR: Record<FuelType, string> = {
-  Petrol: colors.semantic.danger,
-  Diesel: colors.neutral.gray700,
-  Hybrid: colors.brand.verde600,
-  Electric: colors.accent.amber500,
-};
-
-function FuelIcon({ type, color, size = 16 }: { type: FuelType; color: string; size?: number }) {
-  switch (type) {
-    case 'Petrol':
-      return <MaterialCommunityIcons name="gas-station" size={size} color={color} />;
-    case 'Diesel':
-      return <MaterialCommunityIcons name="barrel" size={size} color={color} />;
-    case 'Hybrid':
-      return <Ionicons name="leaf" size={size} color={color} />;
-    case 'Electric':
-      return <Ionicons name="flash" size={size} color={color} />;
-  }
-}
+import { useVehicles } from '@/src/data/VehiclesStore';
+import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
 
 export function VehicleForm() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { vehicleId } = useLocalSearchParams<{ vehicleId?: string }>();
-  const { vehicles, addVehicle, updateVehicle } = useVehicles();
+  const { vehicles, loading, error, refresh, addVehicle, updateVehicle } = useVehicles();
+  const existingVehicle = vehicles.find((vehicle) => vehicle.vehicle_id === vehicleId);
+  const isEditing = Boolean(vehicleId);
+  const [make, setMake] = useState(existingVehicle?.vehicle_models?.make ?? '');
+  const [modelId, setModelId] = useState(existingVehicle?.model_id ?? '');
+  const [year, setYear] = useState(existingVehicle?.vehicle_models?.year.toString() ?? '');
+  const [plate, setPlate] = useState(existingVehicle?.license_plate ?? '');
+  const [makes, setMakes] = useState<VehicleMake[]>([]);
+  const [models, setModels] = useState<VehicleCatalogueModel[]>([]);
+  const [makesLoading, setMakesLoading] = useState(true);
+  const [modelsLoading, setModelsLoading] = useState(false);
+  const [catalogueError, setCatalogueError] = useState<string | null>(null);
+  const [details, setDetails] = useState<VehicleModel | null>(null);
+  const [emissionsLoading, setEmissionsLoading] = useState(false);
+  const [emissionsError, setEmissionsError] = useState<string | null>(null);
+  const [retry, setRetry] = useState(0);
+  const [saving, setSaving] = useState(false);
+  const initialized = useRef(Boolean(existingVehicle));
 
-  const existingVehicle = useMemo(
-    () => vehicles.find((vehicle) => vehicle.id === vehicleId),
-    [vehicles, vehicleId]
-  );
-  const isEditing = Boolean(existingVehicle);
-
-  const [make, setMake] = useState(existingVehicle?.make ?? '');
-  const [model, setModel] = useState(existingVehicle?.model ?? '');
-  const [year, setYear] = useState(existingVehicle?.year ?? String(CURRENT_YEAR));
-  const [seats, setSeats] = useState(existingVehicle?.seats ?? '4');
-  const [colour, setColour] = useState(existingVehicle?.colour ?? '');
-  const [fuelType, setFuelType] = useState<FuelType | null>(existingVehicle?.fuelType ?? null);
-  const [plate, setPlate] = useState(existingVehicle?.plate ?? '');
-
-  const isValid = Boolean(make && model.trim() && colour.trim() && fuelType && plate.trim());
-
-  const handleSave = () => {
-    if (!isValid || !fuelType) return;
-    const input = {
-      make,
-      model: model.trim(),
-      year,
-      seats,
-      colour: colour.trim(),
-      fuelType,
-      plate: plate.trim().toUpperCase(),
-    };
-    if (isEditing && existingVehicle) {
-      updateVehicle(existingVehicle.id, input);
-    } else {
-      addVehicle(input);
+  useEffect(() => {
+    if (existingVehicle && !initialized.current) {
+      initialized.current = true;
+      setMake(existingVehicle.vehicle_models?.make ?? '');
+      setModelId(existingVehicle.model_id);
+      setPlate(existingVehicle.license_plate);
+      setYear(existingVehicle.vehicle_models?.year.toString() ?? '');
     }
-    router.back();
+  }, [existingVehicle]);
+
+  // Load makes once on mount; retries only happen when explicitly requested.
+  useEffect(() => {
+    let cancelled = false;
+    setMakesLoading(true);
+    setCatalogueError(null);
+    getVehicleMakes().then((data) => {
+      if (!cancelled) setMakes(data);
+    }).catch((e) => {
+      if (!cancelled) setCatalogueError(e instanceof Error ? e.message : 'Unable to load makes.');
+    }).finally(() => {
+      if (!cancelled) setMakesLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [retry]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setModels([]);
+    setCatalogueError(null);
+    if (!make) {
+      setModelsLoading(false);
+      return () => { cancelled = true; };
+    }
+    setModelsLoading(true);
+    getVehicleModels(make).then((data) => {
+      if (!cancelled) {
+        setModels(data);
+        if (existingVehicle && modelId === existingVehicle.model_id) {
+          const match = data.find((item) => item.model === existingVehicle.vehicle_models?.model);
+          if (match) setModelId(match.model_id);
+        }
+      }
+    }).catch((e) => {
+      if (!cancelled) setCatalogueError(e instanceof Error ? e.message : 'Unable to load models.');
+    }).finally(() => {
+      if (!cancelled) setModelsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [make, retry]);
+
+  useEffect(() => {
+    let cancelled = false;
+    setDetails(null);
+    setEmissionsError(null);
+    const catalogueModel = models.find((item) => item.model_id === modelId);
+    if (!catalogueModel || !year) {
+      setEmissionsLoading(false);
+      return () => { cancelled = true; };
+    }
+    setEmissionsLoading(true);
+    getModelEmissions(modelId, Number(year), make, catalogueModel.model).then((data) => {
+      if (!cancelled) setDetails(data);
+    }).catch((e) => {
+      if (!cancelled) setEmissionsError(e instanceof Error ? e.message : 'Unable to estimate emissions.');
+    }).finally(() => {
+      if (!cancelled) setEmissionsLoading(false);
+    });
+    return () => { cancelled = true; };
+  }, [modelId, year, make, models, retry]);
+
+  const handleMakeChange = (nextMake: string) => {
+    if (nextMake === make) return;
+    setMake(nextMake);
+    setModelId('');
+    setYear('');
+    setModels([]);
+    setDetails(null);
+    setEmissionsError(null);
+    setModelsLoading(true);
+  };
+  const selectedModel = details && details.make === make && details.year === Number(year) ? details : null;
+  const normalizedPlate = plate.trim().toUpperCase();
+  const isValid = Boolean(selectedModel?.co2_g_per_km != null && normalizedPlate && normalizedPlate.length <= 20 && !modelsLoading);
+
+  const handleSave = async () => {
+    if (!isValid || !selectedModel || saving) return;
+    if (vehicles.some((vehicle) => vehicle.vehicle_id !== vehicleId && vehicle.license_plate.trim().toUpperCase() === normalizedPlate)) {
+      Alert.alert('License plate already registered', 'This plate is already on one of your vehicles.');
+      return;
+    }
+    setSaving(true);
+    try {
+      const input = { model_id: selectedModel.model_id, license_plate: normalizedPlate };
+      if (vehicleId) await updateVehicle(vehicleId, input, selectedModel);
+      else await addVehicle(input, selectedModel);
+      router.back();
+    } catch (e) {
+      Alert.alert('Unable to save vehicle', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setSaving(false);
+    }
   };
 
   return (
     <View style={styles.fill}>
       <StatusBar style="light" />
-      <LinearGradient
-        colors={gradients.headerHero}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <LinearGradient colors={gradients.headerHero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerRow}>
-          <Pressable
-            onPress={() => router.back()}
-            hitSlop={8}
-            style={styles.backButton}
-            accessibilityLabel="Go back"
-            accessibilityRole="button">
+          <Pressable onPress={() => router.back()} disabled={saving} hitSlop={8} style={styles.backButton}
+            accessibilityLabel="Go back" accessibilityRole="button">
             <Ionicons name="chevron-back" size={24} color={colors.neutral.white} />
           </Pressable>
           <View>
             <Text style={styles.headerTitle}>{isEditing ? 'Edit Vehicle' : 'Add Vehicle'}</Text>
-            <Text style={styles.headerSubtitle}>
-              {isEditing ? 'Update your vehicle details' : 'Enter your vehicle details'}
-            </Text>
+            <Text style={styles.headerSubtitle}>Enter your vehicle details</Text>
           </View>
         </View>
       </LinearGradient>
-
-      <ScrollView
-        style={styles.fill}
-        contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
+      <ScrollView style={styles.fill} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         keyboardShouldPersistTaps="handled">
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>VEHICLE INFO</Text>
-
-          <View style={styles.fieldGroup}>
-            <SelectField
-              label="Make"
-              placeholder="Select make..."
-              value={make || null}
-              options={MAKES}
-              onChange={setMake}
-            />
+        {loading ? <ActivityIndicator size="large" color={colors.brand.verde600} /> : error ? (
+          <View>
+            <Text style={styles.fieldLabel}>{error}</Text>
+            <PrimaryButton label="Try Again" onPress={() => void refresh()} />
           </View>
-
-          <View style={styles.fieldGroup}>
-            <TextField label="Model" placeholder="e.g. Corolla Hybrid" value={model} onChangeText={setModel} />
-          </View>
-
-          <View style={styles.row}>
-            <View style={styles.rowField}>
-              <SelectField
-                label="Year"
-                placeholder="Select year..."
-                value={year || null}
-                options={YEARS}
-                onChange={setYear}
-              />
-            </View>
-            <View style={styles.rowField}>
-              <SelectField
-                label="Seats"
-                placeholder="Select seats..."
-                value={seats || null}
-                options={SEATS}
-                onChange={setSeats}
-              />
-            </View>
-          </View>
-
-          <View style={styles.fieldGroup}>
-            <TextField label="Colour" placeholder="e.g. Pearl White" value={colour} onChangeText={setColour} />
-          </View>
-        </View>
-
-        <View style={styles.section}>
-          <Text style={styles.sectionLabel}>FUEL & REGISTRATION</Text>
-
-          <Text style={styles.fieldLabel}>Fuel Type</Text>
-          <View style={styles.fuelGrid}>
-            {FUEL_TYPES.map((type) => {
-              const selected = fuelType === type;
-              return (
-                <Pressable
-                  key={type}
-                  onPress={() => setFuelType(type)}
-                  style={[styles.fuelOption, selected && styles.fuelOptionSelected]}>
-                  <View style={styles.fuelIconChip}>
-                    <FuelIcon type={type} color={FUEL_ACCENT_COLOR[type]} />
+        ) : isEditing && !existingVehicle ? (
+          <Text style={styles.fieldLabel}>Vehicle not found.</Text>
+        ) : (
+          <View>
+            <View style={styles.section}>
+              <Text style={styles.sectionLabel}>VEHICLE INFO</Text>
+              <View style={styles.fieldGroup}>
+                <ComboBox label="Make" placeholder={makesLoading ? 'Loading makes...' : 'Select make...'}
+                  value={make || null} options={makes.map((item) => ({ value: item.name, label: item.name }))}
+                  disabled={makesLoading || saving} onChange={handleMakeChange} />
+              </View>
+              <View style={styles.fieldGroup}>
+                <ComboBox label="Model" placeholder={modelsLoading ? 'Loading models...' : 'Select model...'}
+                  value={modelId || null} options={models.map((model) => ({ value: model.model_id, label: model.model }))}
+                  disabled={!make || modelsLoading || saving}
+                  onChange={(id) => { if (id !== modelId) { setModelId(id); setDetails(null); setYear(''); } }} />
+              </View>
+              <View style={styles.fieldGroup}>
+                <ComboBox label="Year" placeholder="Select year..." value={year || null}
+                  options={Array.from({ length: new Date().getFullYear() - 1885 }, (_, index) => {
+                    const value = String(new Date().getFullYear() - index);
+                    return { value, label: value };
+                  })}
+                  disabled={!modelId || modelsLoading || saving}
+                  onChange={(value) => { if (value !== year) { setYear(value); setDetails(null); } }} />
+              </View>
+              {!makesLoading && makes.length === 0 && !catalogueError && <Text style={styles.fieldLabel}>No makes available.</Text>}
+              {make && !modelsLoading && models.length === 0 && !catalogueError && <Text style={styles.fieldLabel}>No models available for this make.</Text>}
+              {catalogueError && (
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>{catalogueError}</Text>
+                  <PrimaryButton label="Try Again" onPress={() => setRetry((value) => value + 1)} />
+                </View>
+              )}
+              {emissionsLoading && <ActivityIndicator style={styles.fieldGroup} color={colors.brand.verde600} />}
+              {emissionsError && (
+                <View style={styles.fieldGroup}>
+                  <Text style={styles.fieldLabel}>{emissionsError}</Text>
+                  <PrimaryButton label="Retry Estimate" onPress={() => setRetry((value) => value + 1)} />
+                </View>
+              )}
+              {selectedModel?.co2_g_per_km != null && (
+                <View style={styles.summary}>
+                  <GreenScoreBadge grade={getGreenScore(selectedModel.co2_g_per_km)} size={44} />
+                  <View>
+                    <Text style={styles.fieldLabel}>Green Score</Text>
+                    <Text style={styles.emissions}>{selectedModel.co2_g_per_km.toFixed(2)} g CO2e/km</Text>
+                    
                   </View>
-                  <Text style={[styles.fuelLabel, selected && styles.fuelLabelSelected]}>{type}</Text>
-                </Pressable>
-              );
-            })}
+                </View>
+              )}
+              <View style={styles.fieldGroup}>
+                <TextField label="Number Plate" placeholder="e.g. ABC 123" autoCapitalize="characters"
+                  value={plate} onChangeText={setPlate} editable={!saving} />
+              </View>
+              {normalizedPlate.length > 20 && <Text style={styles.fieldLabel}>Number plate must be at most 20 characters.</Text>}
+            </View>
+            <PrimaryButton label={saving ? 'Saving...' : isEditing ? 'Save Changes' : 'Save Vehicle'}
+              onPress={handleSave} disabled={!isValid || saving} />
           </View>
-
-          <View style={styles.fieldGroup}>
-            <TextField
-              label="Number Plate"
-              placeholder="e.g. ABC 123"
-              autoCapitalize="characters"
-              value={plate}
-              onChangeText={setPlate}
-            />
-          </View>
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <CalloutBanner
-            variant="info"
-            heading="Green Score"
-            body="Your vehicle details are used to calculate your Green Score for each ride using real emissions data. Only passengers you match with can see your car."
-            icon={<Ionicons name="sparkles" size={20} color={colors.brand.verde600} />}
-          />
-        </View>
-
-        <View style={styles.fieldGroup}>
-          <PrimaryButton
-            label={isEditing ? 'Save Changes' : 'Save Vehicle'}
-            onPress={handleSave}
-            disabled={!isValid}
-          />
-        </View>
+        )}
       </ScrollView>
     </View>
   );
@@ -279,57 +284,13 @@ const styles = StyleSheet.create({
   fieldGroup: {
     marginTop: 16,
   },
-  row: {
-    flexDirection: 'row',
-    gap: 12,
-    marginTop: 16,
-  },
-  rowField: {
-    flex: 1,
-  },
+  summary: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  emissions: { fontFamily: fontFamily.bodyRegular, fontSize: fontSize.sm, color: colors.neutral.gray700 },
   fieldLabel: {
     marginTop: 16,
     marginBottom: 8,
     fontFamily: fontFamily.headingSemibold,
     fontSize: fontSize.sm,
     color: colors.neutral.gray700,
-  },
-  fuelGrid: {
-    flexDirection: 'row',
-    flexWrap: 'wrap',
-    gap: 12,
-  },
-  fuelOption: {
-    width: '47%',
-    minHeight: tapTarget.minimum,
-    borderWidth: 2,
-    borderColor: colors.neutral.gray200,
-    borderRadius: radius.xl,
-    backgroundColor: colors.neutral.white,
-    flexDirection: 'row',
-    alignItems: 'center',
-    paddingHorizontal: 12,
-    paddingVertical: 12,
-    gap: 8,
-  },
-  fuelOptionSelected: {
-    borderColor: colors.brand.verde600,
-    backgroundColor: colors.brand.verde500,
-  },
-  fuelIconChip: {
-    width: 28,
-    height: 28,
-    borderRadius: radius.lg,
-    backgroundColor: colors.neutral.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  fuelLabel: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray700,
-  },
-  fuelLabelSelected: {
-    color: colors.neutral.white,
   },
 });

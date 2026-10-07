@@ -2,26 +2,38 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { StatusIcon } from '@/src/components/StatusIcon';
 import { VehicleCard } from '@/src/components/VehicleCard';
-import { useVehicles } from '@/src/data/TempVehicleContext';
+import { useVehicles } from '@/src/data/VehiclesStore';
 import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
 
 export function MyVehicles() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { vehicles, removeVehicle } = useVehicles();
+  const { vehicles, loading, error, refresh, removeVehicle } = useVehicles();
+  const [removing, setRemoving] = useState<string | null>(null);
 
   const handleAdd = () => router.push('/vehicle-form');
   const handleEdit = (vehicleId: string) => router.push({ pathname: '/vehicle-form', params: { vehicleId } });
   const handleRemove = (vehicleId: string, label: string) => {
+    if (removing) return;
     Alert.alert('Remove vehicle', `Remove ${label} from your account?`, [
       { text: 'Cancel', style: 'cancel' },
-      { text: 'Remove', style: 'destructive', onPress: () => removeVehicle(vehicleId) },
+      { text: 'Remove', style: 'destructive', onPress: async () => {
+        setRemoving(vehicleId);
+        try {
+          await removeVehicle(vehicleId);
+        } catch (e) {
+          Alert.alert('Unable to remove vehicle', e instanceof Error ? e.message : 'Please try again.');
+        } finally {
+          setRemoving(null);
+        }
+      } },
     ]);
   };
 
@@ -59,7 +71,15 @@ export function MyVehicles() {
         </View>
       </LinearGradient>
 
-      {vehicles.length === 0 ? (
+      {loading ? (
+        <View style={styles.emptyState}><ActivityIndicator size="large" color={colors.brand.verde600} /></View>
+      ) : error ? (
+        <View style={styles.emptyState}>
+          <Text style={styles.emptyTitle}>Unable to load vehicles</Text>
+          <Text style={styles.emptySubtitle}>{error}</Text>
+          <View style={styles.emptyButton}><PrimaryButton label="Try Again" onPress={() => void refresh()} /></View>
+        </View>
+      ) : vehicles.length === 0 ? (
         <View style={styles.emptyState}>
           <StatusIcon variant="neutral" size={88} />
           <Text style={styles.emptyTitle}>No vehicles yet</Text>
@@ -75,11 +95,12 @@ export function MyVehicles() {
           style={styles.fill}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}>
           {vehicles.map((vehicle) => (
-            <View key={vehicle.id} style={styles.cardWrap}>
+            <View key={vehicle.vehicle_id} style={styles.cardWrap}>
+              {removing === vehicle.vehicle_id && <ActivityIndicator color={colors.brand.verde600} />}
               <VehicleCard
                 vehicle={vehicle}
-                onEdit={() => handleEdit(vehicle.id)}
-                onRemove={() => handleRemove(vehicle.id, `${vehicle.year} ${vehicle.make} ${vehicle.model}`)}
+                onEdit={() => handleEdit(vehicle.vehicle_id)}
+                onRemove={() => handleRemove(vehicle.vehicle_id, vehicle.license_plate)}
               />
             </View>
           ))}
