@@ -12,6 +12,45 @@ supabase = create_client(
     os.getenv("SUPABASE_SECRET_KEY")
 ).schema("dev")
 
+
+def _serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate):
+    """Builds the {ride, driver, estimate} shape shared by the list and detail endpoints."""
+    return {
+        "ride": {
+            "ride_id": ride["ride_id"],
+            "vehicle_id": ride["vehicle_id"],
+            "ride_status": ride["ride_status"],
+
+            "origin": {
+                "lat": ride["origin_lat"],
+                "lng": ride["origin_lng"],
+            },
+
+            "destination": {
+                "lat": ride["destination_lat"],
+                "lng": ride["destination_lng"],
+            },
+
+            "departure_time": ride["departure_time"],
+            "price_per_passenger": ride["price_per_passenger"],
+            "seats_available": ride["seats_available"],
+            "created_at": ride["created_at"]
+        },
+
+        "driver": {
+            "user_id": driver.get("user_id"),
+            "name": driver.get("name"),
+            "rating": driver_rating,
+            "rating_count": driver_rating_count,
+        },
+
+        "estimate": {
+            "distance_km": estimate.get("distance_km"),
+            "duration_min": estimate.get("duration_min"),
+            "co2_estimate_kg": estimate.get("co2_estimate_kg"),
+        },
+    }
+
 '''
 GET /api/rides
 
@@ -124,43 +163,97 @@ def get_rides():
             driver_rating = driver_ratings_by_id.get(driver_id, 0)
             driver_rating_count = len(reviews_by_user_id.get(driver_id, []))
 
-            rides.append({
-                "ride": {
-                    "ride_id": ride["ride_id"],
-                    "vehicle_id": ride["vehicle_id"],
-                    "ride_status": ride["ride_status"],
-                    
-                    "origin": {
-                        "lat": ride["origin_lat"],
-                        "lng": ride["origin_lng"],
-                    },
-
-                    "destination": {
-                        "lat": ride["destination_lat"],
-                        "lng": ride["destination_lng"],
-                    },
-
-                    "departure_time": ride["departure_time"],
-                    "price_per_passenger": ride["price_per_passenger"],
-                    "seats_available": ride["seats_available"],
-                    "created_at": ride["created_at"]
-                },
-
-                "driver": {
-                    "user_id": driver.get("user_id"),
-                    "name": driver.get("name"),
-                    "rating": driver_rating,
-                    "rating_count": driver_rating_count,
-                },
-                
-                "estimate": {
-                    "distance_km": estimate.get("distance_km"),
-                    "duration_min": estimate.get("duration_min"),
-                    "co2_estimate_kg": estimate.get("co2_estimate_kg"),
-                },
-            })
+            rides.append(_serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate))
 
         return jsonify(rides), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+'''
+GET /api/rides/<ride_id>
+
+Returns a single ride by id, in the same {ride, driver, estimate} shape as the list
+endpoint. Unlike the list, this isn't filtered to "scheduled and not mine" - once you
+have a ride's id (e.g. from the feed, or your own posting), you can look it up directly.
+
+Usage: To be used by the ride details screen.
+'''
+@rides_bp.route("/<ride_id>", methods=["GET"])
+def get_ride(ride_id):
+    user = get_authenticated_user()
+
+    if not user:
+        return jsonify({"error": "Authentication required"}), 401
+
+    try:
+        ride_response = (
+            supabase
+            .table("rides")
+            .select("*")
+            .eq("ride_id", ride_id)
+            .maybe_single()
+            .execute()
+        )
+
+        # .maybe_single() returns None itself (not an object with .data=None) when no row
+        # matches, so every call here needs an existence check before touching .data.
+        if not ride_response or not ride_response.data:
+            return jsonify({"error": "Ride not found"}), 404
+
+        ride = ride_response.data
+
+        vehicle_response = (
+            supabase
+            .table("vehicles")
+            .select("user_id")
+            .eq("vehicle_id", ride["vehicle_id"])
+            .maybe_single()
+            .execute()
+        )
+
+        if not vehicle_response or not vehicle_response.data:
+            return jsonify({"error": "Ride not found"}), 404
+
+        driver_id = vehicle_response.data["user_id"]
+
+        driver_response = (
+            supabase
+            .table("users")
+            .select("user_id, name")
+            .eq("user_id", driver_id)
+            .maybe_single()
+            .execute()
+        )
+
+        driver = driver_response.data if driver_response and driver_response.data else {}
+
+        estimate_response = (
+            supabase
+            .table("route_estimates")
+            .select("*")
+            .eq("ride_id", ride_id)
+            .maybe_single()
+            .execute()
+        )
+
+        # A ride posted without a route estimate yet (e.g. created before that was wired
+        # up) should still return - just with nulls for distance/duration/CO2.
+        estimate = estimate_response.data if estimate_response and estimate_response.data else {}
+
+        reviews_response = (
+            supabase
+            .table("reviews")
+            .select("rating")
+            .eq("reviewee_id", driver_id)
+            .execute()
+        )
+
+        ratings = [review["rating"] for review in reviews_response.data]
+        driver_rating = sum(ratings) / len(ratings) if ratings else 0
+        driver_rating_count = len(ratings)
+
+        return jsonify(_serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate)), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -227,7 +320,9 @@ def create_ride():
         .execute()
     )
 
-    if not vehicle_response.data:
+    # .maybe_single() returns None itself (not an object with .data=None) when no vehicle
+    # matches both filters, so check for that before touching .data.
+    if not vehicle_response or not vehicle_response.data:
         return jsonify({
             "error": "Vehicle not found or does not belong to the current user"
         }), 403
