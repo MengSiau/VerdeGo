@@ -4,6 +4,7 @@ export type Passenger = {
 };
 
 export type Ride = {
+  vehicleId?: string;
   id: string;
   driverId: string;
   driverName: string;

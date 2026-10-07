@@ -1,3 +1,6 @@
+import { useVehicles } from '@/src/data/VehiclesStore';
+import { getGreenScore } from '@/src/utils/greenScore';
+import { calculateRideEmissionsKg } from '@/src/utils/rideEmissions';
 import { Ionicons } from '@expo/vector-icons';
 import Slider from '@react-native-community/slider';
 import { useRouter } from 'expo-router';
@@ -8,14 +11,13 @@ import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
 
 import {
-  DEMO_DISTANCE_KM,
   FUEL_CONSUMPTION_L_PER_100KM,
   PLATFORM_FEE,
   RACV_PETROL_PRICE_PER_L,
   calculateFinalFarePerPassenger,
   calculateFuelCost,
 } from '../fareCalculator';
-import { usePostRideDraft } from '../PostRideContext';
+import { usePostRideDraft, POST_RIDE_DISTANCE_KM } from '../PostRideContext';
 import { PostRideHeader } from '../PostRideHeader';
 
 const MAX_ADJUSTMENT_PERCENT = 20;
@@ -26,20 +28,18 @@ export function PostFare() {
   const { draft, updateDraft } = usePostRideDraft();
 
   const fuelType = draft.fuelType ?? 'hybrid';
-  const seats = draft.seats ?? 2;
-  const greenScore = draft.greenScore;
+  const { vehicles, loading } = useVehicles();
+  const vehicle = vehicles.find((item) => item.vehicle_id === draft.vehicleId);
+  const model = vehicle?.vehicle_models;
+  const factor = model?.co2_g_per_km;
+  const distanceKm = POST_RIDE_DISTANCE_KM;
+  const co2Total = calculateRideEmissionsKg(factor, distanceKm);
+  const greenScore = factor != null && Number.isFinite(factor) && factor >= 0 ? { grade: getGreenScore(factor) } : undefined;
   const adjustmentPercent = draft.fareAdjustmentPercent ?? 0;
 
   const fuelConsumption = FUEL_CONSUMPTION_L_PER_100KM[fuelType];
-  const fuelCost = calculateFuelCost(fuelType);
-  const finalFarePerPassenger = calculateFinalFarePerPassenger(fuelType, adjustmentPercent);
-
-  const co2Total = greenScore ? (greenScore.co2Per100km * DEMO_DISTANCE_KM) / 100 : undefined;
-  const co2VsAverage =
-    greenScore && co2Total !== undefined
-      ? co2Total / (1 - greenScore.percentBelowAverage / 100) - co2Total
-      : undefined;
-  const co2BelowAverage = co2VsAverage !== undefined ? co2VsAverage >= 0 : false;
+  const fuelCost = calculateFuelCost(fuelType, distanceKm ?? 0);
+  const finalFarePerPassenger = calculateFinalFarePerPassenger(fuelType, adjustmentPercent, distanceKm ?? 0);
 
   const setAdjustment = (percent: number) => updateDraft({ fareAdjustmentPercent: Math.round(percent) });
 
@@ -54,8 +54,8 @@ export function PostFare() {
         <View style={styles.fareCard}>
           <Text style={styles.sectionLabel}>Fare Calculation</Text>
 
-          <FareRow label="Distance" value={`${DEMO_DISTANCE_KM} km`} />
-          <FareRow label="Petrol price (RACV live)" value={`$${RACV_PETROL_PRICE_PER_L.toFixed(2)}/L`} />
+          <FareRow label="Distance" value={`${distanceKm ?? 0} km`} />
+          <FareRow label="Estimated fuel price" value={`$${RACV_PETROL_PRICE_PER_L.toFixed(2)}/L`} />
           <FareRow label="Fuel consumption" value={`${fuelConsumption.toFixed(1)} L/100km`} />
           <FareRow label="Fuel cost" value={`$${fuelCost.toFixed(2)}`} />
           <FareRow label="VerdeGo platform fee" value={`$${PLATFORM_FEE.toFixed(2)}`} />
@@ -98,17 +98,16 @@ export function PostFare() {
           </View>
         </View>
 
-        {greenScore && co2Total !== undefined && co2VsAverage !== undefined && (
+        {greenScore && co2Total !== undefined && (
           <View style={styles.greenScoreBanner}>
             <Ionicons name="leaf" size={18} color={colors.brand.verde600} />
             <View style={styles.greenScoreTextWrap}>
               <Text style={styles.greenScoreHeading}>
                 {greenScore.grade} Green Score · {co2Total.toFixed(2)} kg CO
-                <Text style={styles.subscript}>2</Text> total
+                <Text style={styles.subscript}>2</Text>e total
               </Text>
               <Text style={styles.greenScoreBody}>
-                {co2BelowAverage ? 'Saving' : 'Emitting'} {Math.abs(co2VsAverage).toFixed(2)} kg vs solo
-                drive · {seats} passenger{seats === 1 ? '' : 's'}
+                Based on your saved vehicle and {distanceKm} km journey.
               </Text>
             </View>
           </View>
@@ -116,7 +115,7 @@ export function PostFare() {
       </ScrollView>
 
       <View style={styles.actions}>
-        <PrimaryButton label="Review & Post Ride" onPress={() => router.push('/post-confirm')} />
+        <PrimaryButton label="Review & Post Ride" disabled={loading || co2Total === undefined} onPress={() => router.push('/post-confirm')} />
       </View>
     </View>
   );

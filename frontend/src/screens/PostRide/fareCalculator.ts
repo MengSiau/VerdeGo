@@ -1,8 +1,7 @@
 import type { FuelType } from './PostRideContext';
 
-// No real distance/pricing API wired up yet - fixed demo values (distance matches Priya's
-// dummy ride so figures stay consistent with the rest of the app's demo data).
-// Shared between PostFare (breakdown) and PostConfirm (final summary) so both agree on one price.
+// Shared fare assumptions. Post Ride supplies its entered journey distance.
+// The default distance is retained for existing demo callers.
 export const DEMO_DISTANCE_KM = 18.4;
 export const RACV_PETROL_PRICE_PER_L = 1.89;
 export const PLATFORM_FEE = 0.5;
@@ -13,14 +12,14 @@ export const FUEL_CONSUMPTION_L_PER_100KM: Record<FuelType, number> = {
   electric: 0,
 };
 
-export function calculateFuelCost(fuelType: FuelType) {
-  return (DEMO_DISTANCE_KM / 100) * FUEL_CONSUMPTION_L_PER_100KM[fuelType] * RACV_PETROL_PRICE_PER_L;
+export function calculateFuelCost(fuelType: FuelType, distanceKm = DEMO_DISTANCE_KM) {
+  return (distanceKm / 100) * FUEL_CONSUMPTION_L_PER_100KM[fuelType] * RACV_PETROL_PRICE_PER_L;
 }
 
-export function calculateBaseFarePerPassenger(fuelType: FuelType) {
-  return calculateFuelCost(fuelType) + PLATFORM_FEE;
+export function calculateBaseFarePerPassenger(fuelType: FuelType, distanceKm = DEMO_DISTANCE_KM) {
+  return calculateFuelCost(fuelType, distanceKm) + PLATFORM_FEE;
 }
 
-export function calculateFinalFarePerPassenger(fuelType: FuelType, adjustmentPercent: number) {
-  return calculateBaseFarePerPassenger(fuelType) * (1 + adjustmentPercent / 100);
+export function calculateFinalFarePerPassenger(fuelType: FuelType, adjustmentPercent: number, distanceKm = DEMO_DISTANCE_KM) {
+  return calculateBaseFarePerPassenger(fuelType, distanceKm) * (1 + adjustmentPercent / 100);
 }
