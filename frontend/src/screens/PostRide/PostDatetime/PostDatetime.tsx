@@ -1,34 +1,33 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useMemo, useState, type ReactNode } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
 
+import { buildDepartureIso, formatFullDate, parseIsoDate, toIsoDate } from '../dateUtils';
 import { usePostRideDraft } from '../PostRideContext';
 import { PostRideHeader } from '../PostRideHeader';
 
-const MONTH_LABEL = 'Aug';
-const WEEK_DAYS = [
-  { dow: 'Mon', day: 11 },
-  { dow: 'Tue', day: 12 },
-  { dow: 'Wed', day: 13 },
-  { dow: 'Thu', day: 14 },
-  { dow: 'Fri', day: 15 },
-  { dow: 'Sat', day: 16 },
-  { dow: 'Sun', day: 17 },
-];
-const DEFAULT_DAY_INDEX = 2; // Wed 13, matching the rest of the app's demo date
+const DEFAULT_DAY_INDEX = 0; // today
 
 const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
 const MINUTES = ['00', '15', '30', '45'];
 const MAX_SEATS = 4;
 const MIN_SEATS = 1;
 
-function formatDate(dow: string, day: number) {
-  return `${dow}, ${MONTH_LABEL} ${day}`;
+type WeekDay = { dow: string; day: number; date: Date };
+
+// A real rolling 7-day window starting today, rather than a fixed demo week.
+function buildWeekDays(): WeekDay[] {
+  const today = new Date();
+  return Array.from({ length: 7 }, (_, i) => {
+    const date = new Date(today);
+    date.setDate(today.getDate() + i);
+    return { dow: date.toLocaleDateString('en-US', { weekday: 'short' }), day: date.getDate(), date };
+  });
 }
 
 function cycle(options: string[], current: string) {
@@ -36,14 +35,10 @@ function cycle(options: string[], current: string) {
   return options[(index + 1) % options.length];
 }
 
-// Demo data is fixed to Aug 2025 throughout the app - build a real Date for the native picker
-// from our string fields, all anchored to that same fixed month/year.
-function buildDate(day: number, hour: string, minute: string, period: 'AM' | 'PM') {
-  const date = new Date(2025, 7, day);
-  let hours = parseInt(hour, 10) % 12;
-  if (period === 'PM') hours += 12;
-  date.setHours(hours, parseInt(minute, 10), 0, 0);
-  return date;
+// Combines a calendar day with the hour/minute/period fields into a real Date, for seeding
+// the native picker sheets.
+function combineDateAndTime(date: Date, hour: string, minute: string, period: 'AM' | 'PM') {
+  return new Date(buildDepartureIso(toIsoDate(date), hour, minute, period));
 }
 
 function to12Hour(date: Date) {
@@ -62,22 +57,23 @@ type TimeField = 'hour' | 'minute' | 'period';
 export function PostDatetime() {
   const router = useRouter();
   const { draft, updateDraft } = usePostRideDraft();
+  const weekDays = useMemo(() => buildWeekDays(), []);
   const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(DEFAULT_DAY_INDEX);
   const [focusedField, setFocusedField] = useState<TimeField | null>('minute');
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [timePickerVisible, setTimePickerVisible] = useState(false);
-  const [tempDate, setTempDate] = useState(() => new Date(2025, 7, 13, 8, 15));
+  const [tempDate, setTempDate] = useState(() => new Date());
 
   const hour = draft.hour ?? '08';
   const minute = draft.minute ?? '15';
   const period = draft.period ?? 'AM';
   const seats = draft.seats ?? 2;
-  const currentDay = selectedDayIndex !== null ? WEEK_DAYS[selectedDayIndex].day : 13;
+  const currentDate = draft.departureDate ? parseIsoDate(draft.departureDate) : weekDays[selectedDayIndex ?? 0].date;
 
   const selectDay = (index: number) => {
     setSelectedDayIndex(index);
-    const day = WEEK_DAYS[index];
-    updateDraft({ date: formatDate(day.dow, day.day) });
+    const { date } = weekDays[index];
+    updateDraft({ date: formatFullDate(date), departureDate: toIsoDate(date) });
   };
 
   const cycleHour = () => {
@@ -99,18 +95,17 @@ export function PostDatetime() {
   };
 
   const openDatePicker = () => {
-    setTempDate(buildDate(currentDay, hour, minute, period));
+    setTempDate(combineDateAndTime(currentDate, hour, minute, period));
     setDatePickerVisible(true);
   };
   const openTimePicker = () => {
-    setTempDate(buildDate(currentDay, hour, minute, period));
+    setTempDate(combineDateAndTime(currentDate, hour, minute, period));
     setTimePickerVisible(true);
   };
 
   const applyPickedDate = (date: Date) => {
-    const formatted = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    updateDraft({ date: formatted });
-    const matchIndex = WEEK_DAYS.findIndex((d) => d.day === date.getDate());
+    updateDraft({ date: formatFullDate(date), departureDate: toIsoDate(date) });
+    const matchIndex = weekDays.findIndex((d) => toIsoDate(d.date) === toIsoDate(date));
     setSelectedDayIndex(matchIndex >= 0 ? matchIndex : null);
   };
   const applyPickedTime = (date: Date) => {
@@ -132,9 +127,7 @@ export function PostDatetime() {
     if (event.type === 'set' && date) applyPickedTime(date);
   };
 
-  const selectedDay = WEEK_DAYS[selectedDayIndex ?? DEFAULT_DAY_INDEX];
-  const fullDateText =
-    selectedDayIndex !== null ? formatDate(selectedDay.dow, selectedDay.day) : (draft.date ?? '');
+  const fullDateText = formatFullDate(currentDate);
 
   return (
     <View style={styles.fill}>
@@ -150,10 +143,10 @@ export function PostDatetime() {
         </View>
         <View style={styles.dateCard}>
           <View style={styles.weekRow}>
-            {WEEK_DAYS.map((day, index) => {
+            {weekDays.map((day, index) => {
               const selected = index === selectedDayIndex;
               return (
-                <Pressable key={day.day} onPress={() => selectDay(index)} style={styles.dayColumn}>
+                <Pressable key={day.date.toISOString()} onPress={() => selectDay(index)} style={styles.dayColumn}>
                   <Text style={styles.dayLabel}>{day.dow}</Text>
                   <View style={[styles.dayNumberWrap, selected && styles.dayNumberWrapSelected]}>
                     <Text style={[styles.dayNumber, selected && styles.dayNumberSelected]}>{day.day}</Text>

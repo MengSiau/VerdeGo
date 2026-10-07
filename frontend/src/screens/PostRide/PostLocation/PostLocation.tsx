@@ -5,18 +5,14 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { colors, fontFamily, fontSize, mapBg, radius, screenPaddingX } from '@/src/theme';
 
+import { DESTINATION, DEFAULT_PICKUP, PICKUP_OPTIONS } from '../locations';
 import { usePostRideDraft } from '../PostRideContext';
 import { PostRideHeader } from '../PostRideHeader';
-
-const DEFAULT_PICKUP = 'Glen Waverley Station';
-const DESTINATION = 'Monash Clayton Campus';
-
-const SUGGESTED_NEARBY = ['Glen Waverley Station', 'Brandon Park Shopping Centre', 'Springvale Station'];
 
 export function PostLocation() {
   const router = useRouter();
   const { draft, updateDraft } = usePostRideDraft();
-  const pickup = draft.pickup ?? DEFAULT_PICKUP;
+  const pickup = draft.pickup ?? DEFAULT_PICKUP.name;
 
   const handleConfirm = () => {
     updateDraft({ pickup });
@@ -45,22 +41,22 @@ export function PostLocation() {
           <View style={styles.divider} />
           <View style={styles.locationRow}>
             <Ionicons name="location" size={16} color={colors.brand.verde600} />
-            <Text style={styles.destinationText}>{DESTINATION}</Text>
+            <Text style={styles.destinationText}>{DESTINATION.name}</Text>
             <Text style={styles.fixedText}>Fixed</Text>
           </View>
         </View>
 
         <View style={[styles.floatingCard, styles.suggestedCard]}>
           <Text style={styles.sectionLabel}>Suggested Nearby</Text>
-          {SUGGESTED_NEARBY.map((place, index) => (
+          {PICKUP_OPTIONS.map((option, index) => (
             <Pressable
-              key={place}
-              onPress={() => updateDraft({ pickup: place })}
-              style={[styles.suggestedRow, index === SUGGESTED_NEARBY.length - 1 && styles.suggestedRowLast]}>
+              key={option.name}
+              onPress={() => updateDraft({ pickup: option.name })}
+              style={[styles.suggestedRow, index === PICKUP_OPTIONS.length - 1 && styles.suggestedRowLast]}>
               <View style={styles.suggestedIcon}>
                 <Ionicons name="location" size={14} color={colors.brand.verde600} />
               </View>
-              <Text style={styles.suggestedText}>{place}</Text>
+              <Text style={styles.suggestedText}>{option.name}</Text>
             </Pressable>
           ))}
         </View>

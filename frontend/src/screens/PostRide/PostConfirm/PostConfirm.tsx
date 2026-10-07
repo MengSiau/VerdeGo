@@ -4,62 +4,32 @@ import { calculateRideEmissionsKg } from '@/src/utils/rideEmissions';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import Svg, { Path } from 'react-native-svg';
 
+import { createRide } from '@/src/api/rides';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { SecondaryButton } from '@/src/components/SecondaryButton';
-import { CURRENT_USER_ID, CURRENT_USER_NAME } from '@/src/data/currentUser';
-import { useRidesStore } from '@/src/data/RidesStore';
-import type { Ride } from '@/src/data/rides';
 import { colors, fontFamily, fontSize, mapBg, radius, screenPaddingX } from '@/src/theme';
 
+import { buildDepartureIso, formatFullDate, toIsoDate } from '../dateUtils';
 import { calculateFinalFarePerPassenger } from '../fareCalculator';
+import { DESTINATION, findPickupByName } from '../locations';
 import { usePostRideDraft, POST_RIDE_DISTANCE_KM } from '../PostRideContext';
 
 const DESTINATION_LABEL = 'Monash Clayton';
-const FULL_DESTINATION = 'Monash Clayton Campus';
-const POSTED_RIDE_DURATION_MINUTES = 18; // Placeholder until route duration is available.
 
 function toStationAbbrev(place: string) {
   return place.replace(/ Station$/, ' Stn');
-}
-
-function to24Hour(hour: string, minute: string, period: 'AM' | 'PM') {
-  let hours = parseInt(hour, 10) % 12;
-  if (period === 'PM') hours += 12;
-  return { hours, minutes: parseInt(minute, 10) };
-}
-
-function addMinutes(hours: number, minutes: number, addMinutesAmount: number) {
-  const totalMinutes = hours * 60 + minutes + addMinutesAmount;
-  const wrapped = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
-  return { hours: Math.floor(wrapped / 60), minutes: wrapped % 60 };
-}
-
-function to12HourDisplay(hours: number, minutes: number) {
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const displayHour = hours % 12 === 0 ? 12 : hours % 12;
-  return `${displayHour}:${String(minutes).padStart(2, '0')} ${period}`;
-}
-
-// draft.date is stored as "Wed, Aug 13" (set in PostDatetime) - reformat to the fuller
-// "Wed, 13 Aug 2025" style used on this review screen.
-function toFullDateDisplay(shortDate: string | undefined) {
-  const fallback = 'Wed, 13 Aug 2025';
-  if (!shortDate) return fallback;
-  const [dow, rest] = shortDate.split(', ');
-  const [month, day] = rest?.split(' ') ?? [];
-  if (!dow || !month || !day) return fallback;
-  return `${dow}, ${day} ${month} 2025`;
 }
 
 export function PostConfirm() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { draft } = usePostRideDraft();
-  const { postRide } = useRidesStore();
+  const [submitting, setSubmitting] = useState(false);
 
   const pickup = toStationAbbrev(draft.pickup ?? 'Glen Waverley Station');
   const fuelType = draft.fuelType ?? 'hybrid';
@@ -78,39 +48,34 @@ export function PostConfirm() {
   const vehicleDisplay = model ? `${model.year} ${model.make} ${model.model} (${vehicle?.license_plate})` : 'Select a saved vehicle';
   const fare = calculateFinalFarePerPassenger(fuelType, adjustmentPercent, distanceKm ?? 0);
 
-  const handlePostRide = () => {
+  const handlePostRide = async () => {
     if (loading || !vehicle || co2Total === undefined || distanceKm === undefined) {
       Alert.alert('Vehicle and distance required', 'Select a saved vehicle with an emissions factor and enter a positive journey distance.');
       return;
     }
-    // TODO: submit the completed ride draft to backend once it exists - for now this just
-    // adds the ride to the shared in-memory store so it shows up in Home/My Rides.
-    const { hours, minutes } = to24Hour(draft.hour ?? '08', draft.minute ?? '15', draft.period ?? 'AM');
-    const dropoff = addMinutes(hours, minutes, POSTED_RIDE_DURATION_MINUTES);
 
-    const newRide: Ride = {
-      id: `posted-${Date.now()}`,
-      driverId: CURRENT_USER_ID,
-      driverName: CURRENT_USER_NAME,
-      rating: 5,
-      ratingCount: 0,
-      pickup: draft.pickup ?? 'Glen Waverley Station',
-      destination: FULL_DESTINATION,
-      date: draft.date ?? 'Wed, Aug 13',
-      departureTime: timeDisplay,
-      dropoffTimeEstimate: to12HourDisplay(dropoff.hours, dropoff.minutes),
-      distanceKm,
-      vehicleId: vehicle.vehicle_id,
-      seats,
-      durationMinutes: POSTED_RIDE_DURATION_MINUTES,
-      price: fare,
-      co2SavedKg: 0,
-      co2EstimateKg: co2Total,
-      confirmedPassengers: [],
-    };
+    const departureDateIso = draft.departureDate ?? toIsoDate(new Date());
+    const departureIso = buildDepartureIso(departureDateIso, draft.hour ?? '08', draft.minute ?? '15', draft.period ?? 'AM');
+    const pickupLocation = findPickupByName(draft.pickup);
 
-    postRide(newRide, draft.date ?? 'Tomorrow');
-    router.push('/home');
+    setSubmitting(true);
+    try {
+      await createRide({
+        vehicle_id: vehicle.vehicle_id,
+        origin_lat: pickupLocation.lat,
+        origin_lng: pickupLocation.lng,
+        destination_lat: DESTINATION.lat,
+        destination_lng: DESTINATION.lng,
+        departure_time: departureIso,
+        price_per_passenger: Number(fare.toFixed(2)),
+        seats_available: seats,
+      });
+      router.push('/home');
+    } catch (e) {
+      Alert.alert('Unable to post ride', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -175,7 +140,7 @@ export function PostConfirm() {
         </Pressable>
 
         <View style={styles.rows}>
-          <SummaryRow label="Date" value={toFullDateDisplay(draft.date)} />
+          <SummaryRow label="Date" value={draft.date ?? formatFullDate(new Date())} />
           <SummaryRow label="Time" value={timeDisplay} />
           <SummaryRow label="Seats" value={`${seats} available`} />
           <SummaryRow label="Distance" value={`${distanceKm ?? 0} km`} />
@@ -193,15 +158,12 @@ export function PostConfirm() {
         </View>
       </View>
 
-      <View style={styles.termsBox}>
-        <Text style={styles.termsText}>
-          By posting, you agree to VerdeGo&apos;s <Text style={styles.termsLink}>Terms of Service</Text> and
-          confirm you hold a valid Australian driver&apos;s licence.
-        </Text>
-      </View>
-
       <View style={styles.actions}>
-        <PrimaryButton label="Post Ride" disabled={loading || co2Total === undefined} onPress={handlePostRide} />
+        <PrimaryButton
+          label={submitting ? 'Posting Ride...' : 'Post Ride'}
+          disabled={loading || submitting || co2Total === undefined}
+          onPress={handlePostRide}
+        />
         <View style={styles.actionGap} />
         <SecondaryButton variant="destructive" label="Cancel Ride" onPress={handleCancel} />
       </View>
@@ -325,23 +287,6 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.headingBold,
     fontSize: fontSize.sm,
     color: colors.neutral.gray900,
-  },
-  termsBox: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: radius['2xl'],
-    backgroundColor: colors.neutral.gray50,
-  },
-  termsText: {
-    textAlign: 'center',
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray500,
-    lineHeight: 20,
-  },
-  termsLink: {
-    fontFamily: fontFamily.headingSemibold,
-    color: colors.brand.verde600,
   },
   actions: {
     marginTop: 16,

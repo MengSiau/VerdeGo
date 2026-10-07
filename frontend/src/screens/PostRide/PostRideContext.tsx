@@ -23,7 +23,8 @@ export type PostRideDraft = {
   vehicleId?: string;
   distanceKm?: number;
   pickup?: string;
-  date?: string; // e.g. "Wed, Aug 13"
+  date?: string; // display string, e.g. "Thu, 15 Oct 2026"
+  departureDate?: string; // "YYYY-MM-DD" - the authoritative calendar day, combined with hour/minute/period at submit time
   hour?: string; // "08"
   minute?: string; // "15"
   period?: "AM" | "PM";
