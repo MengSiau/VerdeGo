@@ -1,7 +1,7 @@
 import type { FuelType } from './PostRideContext';
 
-// Shared fare assumptions. Post Ride supplies its entered journey distance.
-// The default distance is retained for existing demo callers.
+// Fallback distance for when routing is unavailable. Matches Priya's dummy
+// ride so demo figures stay consistent across the app.
 export const DEMO_DISTANCE_KM = 18.4;
 export const RACV_PETROL_PRICE_PER_L = 1.89;
 export const PLATFORM_FEE = 0.5;
@@ -20,6 +20,10 @@ export function calculateBaseFarePerPassenger(fuelType: FuelType, distanceKm = D
   return calculateFuelCost(fuelType, distanceKm) + PLATFORM_FEE;
 }
 
-export function calculateFinalFarePerPassenger(fuelType: FuelType, adjustmentPercent: number, distanceKm = DEMO_DISTANCE_KM) {
+export function calculateFinalFarePerPassenger(
+  fuelType: FuelType,
+  adjustmentPercent: number,
+  distanceKm = DEMO_DISTANCE_KM,
+) {
   return calculateBaseFarePerPassenger(fuelType, distanceKm) * (1 + adjustmentPercent / 100);
 }
