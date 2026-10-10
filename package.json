@@ -1,13 +1,18 @@
 {
-    "name": "verdego",
-    "private": true,
-    "scripts": {
-        "postinstall": "npm --prefix frontend install",
-        "frontend": "npm --prefix frontend start",
-        "backend": "cd backend && python run.py",
-        "dev": "concurrently --names \"frontend,backend\" --prefix-colors \"cyan.bold,green.bold\" \"npm run frontend\" \"npm run backend\""
-    },
-    "devDependencies": {
-        "concurrently": "^9.2.1"
-    }
+  "name": "verdego",
+  "private": true,
+  "scripts": {
+    "postinstall": "npm --prefix frontend install",
+    "frontend": "npm --prefix frontend start",
+    "backend": "cd backend && python run.py",
+    "dev": "concurrently --names \"frontend,backend\" --prefix-colors \"cyan.bold,green.bold\" \"npm run frontend\" \"npm run backend\""
+  },
+  "devDependencies": {
+    "concurrently": "^9.2.1"
+  },
+  "dependencies": {
+    "expo-crypto": "^57.0.3",
+    "expo-location": "^57.0.20",
+    "react-native-maps": "1.27.2"
+  }
 }

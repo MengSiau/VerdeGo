@@ -4,6 +4,7 @@ import { StatusBar } from 'expo-status-bar';
 import type { ReactNode } from 'react';
 import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { calculateCo2SavedKg } from '@/src/utils/co2savings';
 
 import type { Ride } from '@/src/data/rides';
 import { colors, fontFamily, fontSize, mapBg, radius, screenPaddingX } from '@/src/theme';
@@ -12,6 +13,9 @@ import { Avatar } from './Avatar';
 import { CalloutBanner } from './CalloutBanner';
 import { StatTile } from './StatTile';
 import { Stars } from './Stars';
+
+import { RideRouteMap } from './RideRouteMap';
+import { useRoute } from '@/src/hooks/UseRoute';
 
 type RideOverviewProps = {
   ride: Ride;
@@ -24,13 +28,34 @@ export function RideOverview({ ride, actions }: RideOverviewProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const seatsLeft = ride.seats - ride.confirmedPassengers.length;
-
+  const co2SavedKg = calculateCo2SavedKg(ride.distanceKm, ride.confirmedPassengers.length);
+  const co2PotentialKg = calculateCo2SavedKg(ride.distanceKm, ride.seats);
+  const origin = { latitude: ride.pickupLat, longitude: ride.pickupLng };
+  const destination = { latitude: ride.destinationLat, longitude: ride.destinationLng };
+  const { route } = useRoute(origin, destination); 
   return (
+
+    
     <View style={styles.fill}>
       <StatusBar style="dark" />
 
-      {/* TODO: replace with a real map preview (e.g. react-native-maps) showing the route. */}
-      <View style={[styles.mapPlaceholder, { paddingTop: insets.top + 12 }]}>
+            <View style={[styles.mapPlaceholder, { paddingTop: insets.top + 12 }]}>
+        <Pressable
+          style={StyleSheet.absoluteFill}
+          onPress={() =>
+            router.push({
+              pathname: '/route-map/[id]',
+              params: { id: String(ride.id) },
+            })
+          }
+          accessibilityRole="button"
+          accessibilityLabel={`View route from ${ride.pickup} to ${ride.destination} on a map`}>
+          <RideRouteMap
+            ride={ride}
+            style={StyleSheet.absoluteFill}
+          />
+        </Pressable>
+
         <Pressable
           onPress={() => router.back()}
           hitSlop={8}
@@ -39,10 +64,6 @@ export function RideOverview({ ride, actions }: RideOverviewProps) {
           accessibilityRole="button">
           <Ionicons name="chevron-back" size={22} color={colors.neutral.gray900} />
         </Pressable>
-        <View style={styles.mapPlaceholderContent}>
-          <Ionicons name="map-outline" size={28} color={colors.brand.verde600} />
-          <Text style={styles.mapPlaceholderText}>Map preview coming soon</Text>
-        </View>
       </View>
 
       <ScrollView
@@ -123,13 +144,18 @@ export function RideOverview({ ride, actions }: RideOverviewProps) {
           <CalloutBanner
             variant="info"
             heading={`CO2 Estimate · ${ride.co2EstimateKg.toFixed(2)} kg total`}
-            body={`You'd save ${ride.co2SavedKg.toFixed(2)} kg vs driving alone`}
+            body={
+              co2SavedKg > 0
+                ? `Saving ${co2SavedKg.toFixed(2)} kg vs everyone driving alone`
+                : `Could save up to ${co2PotentialKg.toFixed(2)} kg if all ${ride.seats} seats fill`
+            }
             icon={<Ionicons name="leaf" size={20} color={colors.brand.verde600} />}
           />
         </View>
 
         <View style={styles.fieldGroup}>{actions}</View>
       </ScrollView>
+  
     </View>
   );
 }
