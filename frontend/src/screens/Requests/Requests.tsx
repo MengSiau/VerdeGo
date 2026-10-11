@@ -2,7 +2,7 @@ import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Alert, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { acceptRequest, declineRequest, type PendingRequest } from '@/src/api/requests';
@@ -94,7 +94,10 @@ export function Requests() {
         <ScrollView
           style={styles.fill}
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 20 }]}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={colors.brand.verde600} />
+          }>
           {groupedByRide.map(({ ride, requests: rideRequests }) => (
             <RideAccordion
               key={ride.id}

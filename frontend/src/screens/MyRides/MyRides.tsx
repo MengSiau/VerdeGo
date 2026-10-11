@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/src/components/BottomNav';
@@ -54,6 +54,20 @@ export function MyRides() {
         </View>
       </LinearGradient>
 
+      {tab === 'upcoming' && (
+        <View style={styles.filterSection}>
+          <FilterChips
+            options={[
+              { label: 'All', value: 'all', icon: <Ionicons name="apps-outline" size={14} color={roleFilter === 'all' ? colors.neutral.white : colors.neutral.gray600} /> },
+              { label: 'Driving', value: 'driving', icon: <Ionicons name="car-sport-outline" size={14} color={roleFilter === 'driving' ? colors.neutral.white : colors.neutral.gray600} /> },
+              { label: 'Riding', value: 'riding', icon: <Ionicons name="person-outline" size={14} color={roleFilter === 'riding' ? colors.neutral.white : colors.neutral.gray600} /> },
+            ]}
+            value={roleFilter}
+            onChange={setRoleFilter}
+          />
+        </View>
+      )}
+
       {loading && upcoming.length === 0 && past.length === 0 ? (
         <View style={styles.centeredState}>
           <ActivityIndicator size="large" color={colors.brand.verde600} />
@@ -70,37 +84,28 @@ export function MyRides() {
         <ScrollView
           style={styles.fill}
           contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}>
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={colors.brand.verde600} />
+          }>
           {tab === 'upcoming' ? (
-            <>
-              <FilterChips
-                options={[
-                  { label: 'All', value: 'all', icon: <Ionicons name="apps-outline" size={14} color={roleFilter === 'all' ? colors.neutral.white : colors.neutral.gray600} /> },
-                  { label: 'Driving', value: 'driving', icon: <Ionicons name="car-sport-outline" size={14} color={roleFilter === 'driving' ? colors.neutral.white : colors.neutral.gray600} /> },
-                  { label: 'Riding', value: 'riding', icon: <Ionicons name="person-outline" size={14} color={roleFilter === 'riding' ? colors.neutral.white : colors.neutral.gray600} /> },
-                ]}
-                value={roleFilter}
-                onChange={setRoleFilter}
-              />
-
-              <View style={styles.cardsList}>
-                {upcomingRides.map(({ ride, role }) => (
-                  <MyRideCard
-                    key={ride.id}
-                    ride={ride}
-                    dateLabel={ride.date}
-                    role={role}
-                    onPress={() => router.push(`/my-ride-details/${ride.id}`)}
-                  />
-                ))}
-                <View style={styles.endOfList}>
-                  <Ionicons name="car-outline" size={16} color={colors.neutral.gray400} />
-                  <Text style={styles.endOfListText}>
-                    {upcomingRides.length === 0 ? 'No rides match this filter' : 'No more upcoming rides'}
-                  </Text>
-                </View>
+            <View style={styles.cardsList}>
+              {upcomingRides.map(({ ride, role }) => (
+                <MyRideCard
+                  key={ride.id}
+                  ride={ride}
+                  dateLabel={ride.date}
+                  role={role}
+                  onPress={() => router.push(`/my-ride-details/${ride.id}`)}
+                />
+              ))}
+              <View style={styles.endOfList}>
+                <Ionicons name="car-outline" size={16} color={colors.neutral.gray400} />
+                <Text style={styles.endOfListText}>
+                  {upcomingRides.length === 0 ? 'No rides match this filter' : 'No more upcoming rides'}
+                </Text>
               </View>
-            </>
+            </View>
           ) : pastRides.length > 0 ? (
             <View style={styles.cardsList}>
               {pastRides.map(({ ride, role }) => (
@@ -144,6 +149,11 @@ const styles = StyleSheet.create({
   tabsWrap: {
     marginTop: 16,
   },
+  filterSection: {
+    backgroundColor: colors.neutral.white,
+    paddingHorizontal: screenPaddingX.standard,
+    paddingTop: 16,
+  },
   listContent: {
     flexGrow: 1,
     backgroundColor: colors.neutral.white,
@@ -152,7 +162,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   cardsList: {
-    marginTop: 16,
     gap: 12,
   },
   endOfList: {
