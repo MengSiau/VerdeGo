@@ -1,7 +1,7 @@
 import { Ionicons } from '@expo/vector-icons';
 import { LinearGradient } from 'expo-linear-gradient';
 import { StatusBar } from 'expo-status-bar';
-import { useMemo, useState } from 'react';
+import { useState } from 'react';
 import { ActivityIndicator, Alert, Pressable, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
@@ -11,7 +11,6 @@ import { BottomNav } from '@/src/components/BottomNav';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { SecondaryButton } from '@/src/components/SecondaryButton';
 import { Stars } from '@/src/components/Stars';
-import { mapRideWithDetailsToRide } from '@/src/data/browseRides';
 import type { Ride } from '@/src/data/rides';
 import { usePendingRequests } from '@/src/hooks/usePendingRequests';
 import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
@@ -20,23 +19,9 @@ import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from 
 // accept/decline the passenger requests on that ride, without leaving this screen.
 export function Requests() {
   const insets = useSafeAreaInsets();
-  const { requests, loading, error, refresh } = usePendingRequests();
+  const { groups, totalPending, loading, error, refresh } = usePendingRequests();
   const [expandedRideId, setExpandedRideId] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
-
-  const groupedByRide = useMemo(() => {
-    const map = new Map<string, { ride: Ride; requests: PendingRequest[] }>();
-    for (const item of requests) {
-      const rideId = item.ride.ride_id;
-      if (!map.has(rideId)) {
-        map.set(rideId, { ride: mapRideWithDetailsToRide(item), requests: [] });
-      }
-      map.get(rideId)!.requests.push(item);
-    }
-    return Array.from(map.values());
-  }, [requests]);
-
-  const totalPending = requests.length;
 
   const handleAccept = async (item: PendingRequest) => {
     setRespondingId(item.ride_passenger_id);
@@ -68,12 +53,12 @@ export function Requests() {
       <LinearGradient colors={gradients.headerHero} style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>Passenger Requests</Text>
         <Text style={styles.headerSubtitle}>
-          {totalPending} pending request{totalPending === 1 ? '' : 's'} across {groupedByRide.length} ride
-          {groupedByRide.length === 1 ? '' : 's'}
+          {totalPending} pending request{totalPending === 1 ? '' : 's'} across {groups.length} ride
+          {groups.length === 1 ? '' : 's'}
         </Text>
       </LinearGradient>
 
-      {loading && requests.length === 0 ? (
+      {loading && groups.length === 0 ? (
         <View style={styles.emptyState}>
           <ActivityIndicator size="large" color={colors.brand.verde600} />
         </View>
@@ -85,7 +70,7 @@ export function Requests() {
             <PrimaryButton label="Try Again" onPress={() => void refresh()} />
           </View>
         </View>
-      ) : groupedByRide.length === 0 ? (
+      ) : groups.length === 0 ? (
         <View style={styles.emptyState}>
           <Ionicons name="car-outline" size={20} color={colors.neutral.gray400} />
           <Text style={styles.emptyText}>No pending requests right now</Text>
@@ -98,7 +83,7 @@ export function Requests() {
           refreshControl={
             <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={colors.brand.verde600} />
           }>
-          {groupedByRide.map(({ ride, requests: rideRequests }) => (
+          {groups.map(({ ride, requests: rideRequests }) => (
             <RideAccordion
               key={ride.id}
               ride={ride}

@@ -31,14 +31,21 @@ export function useMyRides() {
     setError(null);
     try {
       const results = await getMyRides();
+      const mapped = await Promise.all(
+        results.map(async (item) => ({
+          ride: await mapRideWithDetailsToRide(item),
+          role: item.role,
+          status: item.ride.ride_status,
+        }))
+      );
       if (!active.current || id !== requestId.current) return;
 
       const upcomingEntries: MyRideEntry[] = [];
       const pastEntries: MyRideEntry[] = [];
 
-      for (const item of results) {
-        const entry: MyRideEntry = { ride: mapRideWithDetailsToRide(item), role: item.role };
-        if (item.ride.ride_status === 'scheduled' || item.ride.ride_status === 'ongoing') {
+      for (const { ride, role, status } of mapped) {
+        const entry: MyRideEntry = { ride, role };
+        if (status === 'scheduled' || status === 'ongoing') {
           upcomingEntries.push(entry);
         } else {
           pastEntries.push(entry);

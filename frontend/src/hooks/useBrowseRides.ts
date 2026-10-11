@@ -25,8 +25,9 @@ export function useBrowseRides() {
     setError(null);
     try {
       const results = await getRides();
+      const mapped = await Promise.all(results.map(mapRideWithDetailsToRide));
       if (active.current && id === requestId.current) {
-        setRides(results.map(mapRideWithDetailsToRide));
+        setRides(mapped);
       }
     } catch (e) {
       if (active.current && id === requestId.current) {

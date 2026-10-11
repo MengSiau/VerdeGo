@@ -2,14 +2,23 @@ import { useCallback, useEffect, useRef, useState } from 'react';
 
 import { getPendingRequests, type PendingRequest } from '@/src/api/requests';
 import { useAuth } from '@/src/auth/AuthProvider';
+import { mapRideWithDetailsToRide } from '@/src/data/browseRides';
+import type { Ride } from '@/src/data/rides';
+
+export type RequestGroup = {
+  ride: Ride;
+  requests: PendingRequest[];
+};
 
 // Fetches every pending passenger request across every ride the current user drives
-// (GET /api/rides/requests). Same loading/error/refresh shape as the other ride hooks.
+// (GET /api/rides/requests) and groups them by ride, mapping each ride only once (not
+// once per request on it) since mapping reverse-geocodes the pickup point. Same
+// loading/error/refresh shape as the other ride hooks.
 export function usePendingRequests() {
   const { session } = useAuth();
   const signedIn = Boolean(session);
 
-  const [requests, setRequests] = useState<PendingRequest[]>([]);
+  const [groups, setGroups] = useState<RequestGroup[]>([]);
   const [loading, setLoading] = useState(signedIn);
   const [error, setError] = useState<string | null>(null);
   const active = useRef(true);
@@ -21,9 +30,24 @@ export function usePendingRequests() {
     setLoading(true);
     setError(null);
     try {
-      const result = await getPendingRequests();
+      const results = await getPendingRequests();
+
+      const requestsByRideId = new Map<string, PendingRequest[]>();
+      for (const item of results) {
+        const rideId = item.ride.ride_id;
+        if (!requestsByRideId.has(rideId)) requestsByRideId.set(rideId, []);
+        requestsByRideId.get(rideId)!.push(item);
+      }
+
+      const grouped = await Promise.all(
+        Array.from(requestsByRideId.values()).map(async (requestsForRide) => ({
+          ride: await mapRideWithDetailsToRide(requestsForRide[0]),
+          requests: requestsForRide,
+        }))
+      );
+
       if (active.current && id === requestId.current) {
-        setRequests(result);
+        setGroups(grouped);
       }
     } catch (e) {
       if (active.current && id === requestId.current) {
@@ -43,5 +67,7 @@ export function usePendingRequests() {
     };
   }, [refresh]);
 
-  return { requests, loading, error, refresh };
+  const totalPending = groups.reduce((sum, group) => sum + group.requests.length, 0);
+
+  return { groups, totalPending, loading, error, refresh };
 }

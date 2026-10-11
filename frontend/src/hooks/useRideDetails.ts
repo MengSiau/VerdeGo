@@ -24,8 +24,9 @@ export function useRideDetails(rideId: string | undefined) {
     setError(null);
     try {
       const result = await getRide(rideId);
+      const mapped = await mapRideWithDetailsToRide(result);
       if (active.current && id === requestId.current) {
-        setRide(mapRideWithDetailsToRide(result));
+        setRide(mapped);
       }
     } catch (e) {
       if (active.current && id === requestId.current) {
