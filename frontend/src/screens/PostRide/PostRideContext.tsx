@@ -35,7 +35,8 @@ export type PostRideDraft = {
   destinationLat?: number;
   destinationLng?: number;
   direction?: RideDirection;
-  date?: string;
+  date?: string; // display string, e.g. "Thu, 15 Oct 2026"
+  departureDate?: string; // "YYYY-MM-DD" - the authoritative calendar day, combined with hour/minute/period at submit time
   hour?: string;
   minute?: string;
   period?: 'AM' | 'PM';

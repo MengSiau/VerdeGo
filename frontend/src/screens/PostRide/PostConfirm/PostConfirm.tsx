@@ -11,55 +11,16 @@ import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { createRide } from '@/src/api/rides';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { SecondaryButton } from '@/src/components/SecondaryButton';
-import { colors, fontFamily, fontSize, mapBg, radius, screenPaddingX } from '@/src/theme';
+import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
 import { ExpandableRouteMap } from '@/src/components/ExpandedRouteMap';
-import { CURRENT_USER_ID, CURRENT_USER_NAME } from '@/src/data/currentUser';
-import { useRidesStore } from '@/src/data/RidesStore';
-import type { Ride } from '@/src/data/rides';
 import { useRoute } from '@/src/hooks/UseRoute';
 
 import { buildDepartureIso, formatFullDate, toIsoDate } from '../dateUtils';
 import { calculateFinalFarePerPassenger } from '../fareCalculator';
-import { DESTINATION, findPickupByName } from '../locations';
-import { usePostRideDraft, POST_RIDE_DISTANCE_KM } from '../PostRideContext';
-
-const DESTINATION_LABEL = 'Monash Clayton';
-
-// Only used if the route lookup never produced a duration - the ride still
-// needs a drop-off estimate to display.
-const FALLBACK_DURATION_MINUTES = 18;
+import { usePostRideDraft } from '../PostRideContext';
 
 function toStationAbbrev(place: string) {
   return place.replace(/ Station$/, ' Stn');
-}
-
-function to24Hour(hour: string, minute: string, period: 'AM' | 'PM') {
-  let hours = parseInt(hour, 10) % 12;
-  if (period === 'PM') hours += 12;
-  return { hours, minutes: parseInt(minute, 10) };
-}
-
-function addMinutes(hours: number, minutes: number, addMinutesAmount: number) {
-  const totalMinutes = hours * 60 + minutes + addMinutesAmount;
-  const wrapped = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
-  return { hours: Math.floor(wrapped / 60), minutes: wrapped % 60 };
-}
-
-function to12HourDisplay(hours: number, minutes: number) {
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const displayHour = hours % 12 === 0 ? 12 : hours % 12;
-  return `${displayHour}:${String(minutes).padStart(2, '0')} ${period}`;
-}
-
-// draft.date is stored as "Wed, Aug 13" (set in PostDatetime) - reformat to the fuller
-// "Wed, 13 Aug 2025" style used on this review screen.
-function toFullDateDisplay(shortDate: string | undefined) {
-  const fallback = 'Wed, 13 Aug 2025';
-  if (!shortDate) return fallback;
-  const [dow, rest] = shortDate.split(', ');
-  const [month, day] = rest?.split(' ') ?? [];
-  if (!dow || !month || !day) return fallback;
-    return `${dow}, ${day} ${month} ${new Date().getFullYear()}`;;
 }
 
 export function PostConfirm() {
@@ -97,7 +58,6 @@ export function PostConfirm() {
   const { route } = useRoute(origin, destination);
 
   const distanceKm = draft.distanceKm;
-  const durationMinutes = draft.durationMinutes ?? FALLBACK_DURATION_MINUTES;
   const co2Total = calculateRideEmissionsKg(factor, distanceKm);
   const greenScore =
     factor != null && Number.isFinite(factor) && factor >= 0
@@ -111,7 +71,7 @@ export function PostConfirm() {
     : 'Select a saved vehicle';
   const fare = calculateFinalFarePerPassenger(fuelType, adjustmentPercent, distanceKm ?? 0);
 
-  const handlePostRide = () => {
+  const handlePostRide = async () => {
     // Coordinates are guarded rather than defaulted - a `?? 0` fallback would
     // post a ride with markers in the Atlantic rather than failing visibly.
     if (
@@ -129,42 +89,17 @@ export function PostConfirm() {
       return;
     }
 
-    const { hours, minutes } = to24Hour(draft.hour ?? '08', draft.minute ?? '15', draft.period ?? 'AM');
-    const dropoff = addMinutes(hours, minutes, durationMinutes);
-
-    const newRide: Ride = {
-      id: `posted-${Date.now()}`,
-      driverId: CURRENT_USER_ID,
-      driverName: CURRENT_USER_NAME,
-      rating: 5,
-      ratingCount: 0,
-      pickup: draft.pickup ?? 'Glen Waverley Station',
-      destination: destinationFull,
-      date: draft.date ?? 'Wed, Aug 13',
-      departureTime: timeDisplay,
-      dropoffTimeEstimate: to12HourDisplay(dropoff.hours, dropoff.minutes),
-      distanceKm,
-      vehicleId: vehicle.vehicle_id,
-      seats,
-      durationMinutes,
-      price: fare,
-      co2SavedKg: 0,
-      co2EstimateKg: co2Total,
-      confirmedPassengers: [],
-      pickupLat: origin.latitude,
-      pickupLng: origin.longitude,
-      destinationLat: destination.latitude,
-      destinationLng: destination.longitude,
-    };
+    const departureDateIso = draft.departureDate ?? toIsoDate(new Date());
+    const departureIso = buildDepartureIso(departureDateIso, draft.hour ?? '08', draft.minute ?? '15', draft.period ?? 'AM');
 
     setSubmitting(true);
     try {
       await createRide({
         vehicle_id: vehicle.vehicle_id,
-        origin_lat: pickupLocation.lat,
-        origin_lng: pickupLocation.lng,
-        destination_lat: DESTINATION.lat,
-        destination_lng: DESTINATION.lng,
+        origin_lat: origin.latitude,
+        origin_lng: origin.longitude,
+        destination_lat: destination.latitude,
+        destination_lng: destination.longitude,
         departure_time: departureIso,
         price_per_passenger: Number(fare.toFixed(2)),
         seats_available: seats,
@@ -244,8 +179,8 @@ export function PostConfirm() {
 
       <View style={styles.actions}>
         <PrimaryButton
-          label="Post Ride"
-          disabled={loading || co2Total === undefined || distanceKm === undefined}
+          label={submitting ? 'Posting Ride...' : 'Post Ride'}
+          disabled={loading || submitting || co2Total === undefined || distanceKm === undefined}
           onPress={handlePostRide}
         />
         <View style={styles.actionGap} />

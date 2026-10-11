@@ -12,7 +12,6 @@ import { useReverseGeocode } from '@/src/hooks/UseReverseGeocode';
 import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
 import type { Coordinate } from '@/src/hooks/polyline';
 
-import { DESTINATION, DEFAULT_PICKUP, PICKUP_OPTIONS } from '../locations';
 import { usePostRideDraft } from '../PostRideContext';
 import { PostRideHeader } from '../PostRideHeader';
 
