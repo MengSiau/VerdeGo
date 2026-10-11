@@ -488,6 +488,87 @@ def cancel_ride(ride_id):
         return jsonify({"error": str(e)}), 500
 
 '''
+PATCH /api/rides/<ride_id>/leave
+
+Passenger cancels their own booking on a ride - the counterpart to /cancel, which only
+the ride's driver can use to cancel the whole ride. This only touches the caller's own
+ride_passengers row; the ride itself and everyone else's booking on it are untouched.
+
+Rules:
+- The ride must exist and be 'scheduled' (can't leave an ongoing/completed/cancelled ride).
+- The caller must have a live booking on it ('requested' or 'accepted') - 404 otherwise.
+- If the booking was 'accepted', seats_available is incremented by one to free the seat
+  back up for someone else. A still-'requested' booking never took a seat, so nothing
+  else changes.
+
+Usage: To be used by the "Cancel Ride" action a passenger sees on My Ride Details (the
+driver sees the same action, but it calls /cancel instead).
+'''
+@rides_bp.route("/<ride_id>/leave", methods=["PATCH"])
+def leave_ride(ride_id):
+    user = get_authenticated_user()
+
+    if not user:
+        return jsonify({"error": "Authentication required"}), 401
+
+    try:
+        ride_response = (
+            supabase
+            .table("rides")
+            .select("ride_id, ride_status, seats_available")
+            .eq("ride_id", ride_id)
+            .maybe_single()
+            .execute()
+        )
+
+        if not ride_response or not ride_response.data:
+            return jsonify({"error": "Ride not found"}), 404
+
+        ride = ride_response.data
+
+        if ride["ride_status"] != "scheduled":
+            return jsonify({"error": f"Cannot leave a ride that is {ride['ride_status']}"}), 400
+
+        booking_response = (
+            supabase
+            .table("ride_passengers")
+            .select("ride_passenger_id, ride_passenger_status")
+            .eq("ride_id", ride_id)
+            .eq("passenger_id", user.id)
+            .maybe_single()
+            .execute()
+        )
+
+        if not booking_response or not booking_response.data:
+            return jsonify({"error": "You don't have a booking on this ride"}), 404
+
+        booking = booking_response.data
+
+        if booking["ride_passenger_status"] not in ("requested", "accepted"):
+            return jsonify({"error": f"This booking is already {booking['ride_passenger_status']}"}), 400
+
+        if booking["ride_passenger_status"] == "accepted":
+            supabase.table("rides").update(
+                {"seats_available": ride["seats_available"] + 1}
+            ).eq("ride_id", ride_id).execute()
+
+        updated_response = (
+            supabase
+            .table("ride_passengers")
+            .update({
+                "ride_passenger_status": "cancelled",
+                "responded_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .eq("ride_passenger_id", booking["ride_passenger_id"])
+            .execute()
+        )
+
+        return jsonify(updated_response.data[0]), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+'''
 POST /api/rides
 Creates a new ride for the authenticated user.
 Request body should include:

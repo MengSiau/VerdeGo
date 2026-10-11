@@ -107,3 +107,11 @@ export function requestToJoinRide(rideId: string): Promise<RidePassenger> {
         method: 'POST',
     });
 }
+
+// Passenger cancels their own booking on this ride - the counterpart to cancelRide(),
+// which only works for the driver. Frees up the seat if the booking was accepted.
+export function leaveRide(rideId: string): Promise<RidePassenger> {
+    return apiFetch<RidePassenger>(`/api/rides/${rideId}/leave`, {
+        method: 'PATCH',
+    });
+}

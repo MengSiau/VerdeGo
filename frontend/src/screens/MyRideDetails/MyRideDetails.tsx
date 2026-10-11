@@ -2,7 +2,7 @@ import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
 import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
-import { cancelRide } from '@/src/api/rides';
+import { cancelRide, leaveRide } from '@/src/api/rides';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { RideOverview } from '@/src/components/RideOverview';
 import { SecondaryButton } from '@/src/components/SecondaryButton';
@@ -41,15 +41,19 @@ export function MyRideDetails() {
     );
   }
 
-  // Only the driver can cancel the whole ride - a passenger withdrawing from a ride
-  // they've joined is a separate (not yet built) feature.
+  // The driver cancels the whole ride; a passenger only cancels their own booking on
+  // it - same button and confirmation, different backend call.
   const isDriver = currentUser?.user_id === ride.driverId;
 
   const handleConfirmCancel = async () => {
     if (!id) return;
     setCancelling(true);
     try {
-      await cancelRide(id);
+      if (isDriver) {
+        await cancelRide(id);
+      } else {
+        await leaveRide(id);
+      }
       setCancelModalVisible(false);
       router.push('/my-rides');
     } catch (e) {
@@ -64,24 +68,20 @@ export function MyRideDetails() {
       <RideOverview
         ride={ride}
         actions={
-          isDriver ? (
-            <SecondaryButton
-              variant="destructive"
-              label="Cancel Ride"
-              onPress={() => setCancelModalVisible(true)}
-            />
-          ) : null
+          <SecondaryButton
+            variant="destructive"
+            label="Cancel Ride"
+            onPress={() => setCancelModalVisible(true)}
+          />
         }
       />
-      {isDriver && (
-        <CancelRideModal
-          visible={cancelModalVisible}
-          ride={ride}
-          confirming={cancelling}
-          onKeep={() => setCancelModalVisible(false)}
-          onConfirmCancel={handleConfirmCancel}
-        />
-      )}
+      <CancelRideModal
+        visible={cancelModalVisible}
+        ride={ride}
+        confirming={cancelling}
+        onKeep={() => setCancelModalVisible(false)}
+        onConfirmCancel={handleConfirmCancel}
+      />
     </>
   );
 }
