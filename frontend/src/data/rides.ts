@@ -14,6 +14,13 @@ export type Ride = {
   ratingCount: number;
   pickup: string;
   destination: string;
+  // Coordinates are the real location data; `pickup` and `destination` above
+  // are display labels. Matches the shape in src/api/rides.ts, so switching
+  // the UI to backend data later is a type change rather than a rewrite.
+  pickupLat: number;
+  pickupLng: number;
+  destinationLat: number;
+  destinationLng: number;
   date: string;
   departureTime: string;
   dropoffTimeEstimate: string;
@@ -31,7 +38,15 @@ export type MyRideBooking = {
   dateLabel: string;
 };
 
+// Every demo ride ends at Clayton campus.
+const CLAYTON_LAT = -37.9105;
+const CLAYTON_LNG = 145.1362;
+
 // Demo data standing in for a real rides feed/backend.
+//
+// NOTE: coordinates below are approximate - accurate to roughly a street
+// block, which is fine for a route overview but worth verifying against a real
+// map before the final demo. A pin landing in a car park looks sloppy.
 export const DUMMY_RIDES: Ride[] = [
   {
     id: '1',
@@ -41,6 +56,10 @@ export const DUMMY_RIDES: Ride[] = [
     ratingCount: 47,
     pickup: 'Glen Waverley Station',
     destination: 'Monash Clayton Campus',
+    pickupLat: -37.8797,
+    pickupLng: 145.1647,
+    destinationLat: CLAYTON_LAT,
+    destinationLng: CLAYTON_LNG,
     date: 'Wed, 13 Aug 2025',
     departureTime: '8:15 AM',
     dropoffTimeEstimate: '8:33 AM',
@@ -60,6 +79,10 @@ export const DUMMY_RIDES: Ride[] = [
     ratingCount: 21,
     pickup: 'Clayton Station',
     destination: 'Monash Clayton Campus',
+    pickupLat: -37.9246,
+    pickupLng: 145.1206,
+    destinationLat: CLAYTON_LAT,
+    destinationLng: CLAYTON_LNG,
     date: 'Wed, 13 Aug 2025',
     departureTime: '8:30 AM',
     dropoffTimeEstimate: '8:38 AM',
@@ -79,6 +102,10 @@ export const DUMMY_RIDES: Ride[] = [
     ratingCount: 63,
     pickup: 'Caulfield Station',
     destination: 'Monash Clayton Campus',
+    pickupLat: -37.8774,
+    pickupLng: 145.0424,
+    destinationLat: CLAYTON_LAT,
+    destinationLng: CLAYTON_LNG,
     date: 'Wed, 13 Aug 2025',
     departureTime: '8:45 AM',
     dropoffTimeEstimate: '9:07 AM',
@@ -98,6 +125,10 @@ export const DUMMY_RIDES: Ride[] = [
     ratingCount: 15,
     pickup: 'Huntingdale Station',
     destination: 'Monash Clayton Campus',
+    pickupLat: -37.9116,
+    pickupLng: 145.1046,
+    destinationLat: CLAYTON_LAT,
+    destinationLng: CLAYTON_LNG,
     date: 'Wed, 13 Aug 2025',
     departureTime: '9:00 AM',
     dropoffTimeEstimate: '9:15 AM',

@@ -7,6 +7,8 @@ import { colors, fontFamily, fontSize, radius } from '@/src/theme';
 import { Avatar } from './Avatar';
 import { Stars } from './Stars';
 
+import { calculateCo2SavedKg } from '@/src/utils/co2savings';
+
 type RideCardProps = {
   ride: Ride;
   onPress?: () => void;
@@ -55,7 +57,7 @@ export function RideCard({ ride, onPress }: RideCardProps) {
         <View style={styles.co2Icon}>
           <Ionicons name="leaf" size={12} color={colors.neutral.white} />
         </View>
-        <Text style={styles.co2Text}>{ride.co2SavedKg.toFixed(1)}kg CO2 saved</Text>
+        <Text style={styles.co2Text}>{calculateCo2SavedKg(ride.distanceKm,1).toFixed(1)}kg by joining</Text>
       </View>
     </Pressable>
   );

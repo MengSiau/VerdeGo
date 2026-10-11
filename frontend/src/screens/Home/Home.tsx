@@ -11,6 +11,9 @@ import { FilterChips } from '@/src/components/FilterChips';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { RideCard } from '@/src/components/RideCard';
 import { useBrowseRides } from '@/src/hooks/useBrowseRides';
+import { CURRENT_USER_ID } from '@/src/data/currentUser';
+import { useRidesStore } from '@/src/data/RidesStore';
+import { calculateCo2SavedKg } from '@/src/utils/co2savings';
 import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
 
 type SortFilter = 'eco' | 'cost' | 'time';
@@ -31,6 +34,14 @@ export function Home() {
   // The backend's GET /api/rides already excludes the caller's own vehicles, so no
   // client-side filtering is needed here (unlike the old local demo data).
   const totalCo2Saved = useMemo(() => rides.reduce((sum, ride) => sum + ride.co2SavedKg, 0), [rides]);
+  // Don't show the viewer their own posted rides in the browse feed - you wouldn't
+  // request to join a ride you're the one offering.
+  const browsableRides = useMemo(() => rides.filter((ride) => ride.driverId !== CURRENT_USER_ID), [rides]);
+
+  const totalCo2Saved = useMemo(
+    () => browsableRides.reduce((sum, ride) => sum + calculateCo2SavedKg(ride.distanceKm, ride.confirmedPassengers.length), 0),
+    [browsableRides]
+  );
 
   return (
     <View style={styles.fill}>
