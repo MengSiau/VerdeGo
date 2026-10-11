@@ -11,6 +11,7 @@ import { FilterChips } from '@/src/components/FilterChips';
 import { RideCard } from '@/src/components/RideCard';
 import { CURRENT_USER_ID } from '@/src/data/currentUser';
 import { useRidesStore } from '@/src/data/RidesStore';
+import { calculateCo2SavedKg } from '@/src/utils/co2savings';
 import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
 
 type SortFilter = 'eco' | 'cost' | 'time';
@@ -33,7 +34,7 @@ export function Home() {
   const browsableRides = useMemo(() => rides.filter((ride) => ride.driverId !== CURRENT_USER_ID), [rides]);
 
   const totalCo2Saved = useMemo(
-    () => browsableRides.reduce((sum, ride) => sum + ride.co2SavedKg, 0),
+    () => browsableRides.reduce((sum, ride) => sum + calculateCo2SavedKg(ride.distanceKm, ride.confirmedPassengers.length), 0),
     [browsableRides]
   );
 

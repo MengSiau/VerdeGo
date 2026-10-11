@@ -17,7 +17,7 @@ import {
   calculateFinalFarePerPassenger,
   calculateFuelCost,
 } from '../fareCalculator';
-import { usePostRideDraft, POST_RIDE_DISTANCE_KM } from '../PostRideContext';
+import { usePostRideDraft} from '../PostRideContext';
 import { PostRideHeader } from '../PostRideHeader';
 
 const MAX_ADJUSTMENT_PERCENT = 20;
@@ -32,7 +32,7 @@ export function PostFare() {
   const vehicle = vehicles.find((item) => item.vehicle_id === draft.vehicleId);
   const model = vehicle?.vehicle_models;
   const factor = model?.co2_g_per_km;
-  const distanceKm = POST_RIDE_DISTANCE_KM;
+  const distanceKm = draft.distanceKm;
   const co2Total = calculateRideEmissionsKg(factor, distanceKm);
   const greenScore = factor != null && Number.isFinite(factor) && factor >= 0 ? { grade: getGreenScore(factor) } : undefined;
   const adjustmentPercent = draft.fareAdjustmentPercent ?? 0;
