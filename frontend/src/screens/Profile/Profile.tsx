@@ -224,6 +224,16 @@ export function Profile() {
           </Card>
         </Section>
 
+        <Section title="Developer">
+          <Card>
+            <AccountRow
+              icon="construct-outline"
+              label="Dev Settings"
+              onPress={() => router.push("/dev-settings")}
+            />
+          </Card>
+        </Section>
+
         <Pressable
           onPress={handleSignOut}
           style={({ pressed }) => [
