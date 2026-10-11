@@ -19,6 +19,8 @@ export interface Ride {
     price_per_passenger: number;
     seats_available: number;
     created_at: string;
+    // Everyone whose booking on this ride is 'accepted' - not people who've only requested.
+    confirmed_passengers: { user_id: string; name: string }[];
 }
 
 export interface DriverSummary {

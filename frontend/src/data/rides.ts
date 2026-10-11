@@ -2,7 +2,6 @@ import { CURRENT_USER_ID, CURRENT_USER_NAME } from './currentUser';
 
 export type Passenger = {
   name: string;
-  pickup: string;
 };
 
 export type Ride = {
@@ -25,7 +24,7 @@ export type Ride = {
   departureTime: string;
   dropoffTimeEstimate: string;
   distanceKm: number;
-  seats: number;
+  seats: number; // seats still open, not the vehicle's total capacity - don't subtract confirmedPassengers.length from this
   durationMinutes: number;
   price: number;
   co2SavedKg: number; // saved vs driving alone
@@ -69,7 +68,7 @@ export const DUMMY_RIDES: Ride[] = [
     price: 4.2,
     co2SavedKg: 0.58,
     co2EstimateKg: 0.27,
-    confirmedPassengers: [{ name: 'James Chen', pickup: 'Springvale Stn' }],
+    confirmedPassengers: [{ name: 'James Chen' }],
   },
   {
     id: '2',
@@ -115,7 +114,7 @@ export const DUMMY_RIDES: Ride[] = [
     price: 5.8,
     co2SavedKg: 1.1,
     co2EstimateKg: 0.35,
-    confirmedPassengers: [{ name: 'Arjun Patel', pickup: 'Oakleigh Stn' }],
+    confirmedPassengers: [{ name: 'Arjun Patel' }],
   },
   {
     id: '4',

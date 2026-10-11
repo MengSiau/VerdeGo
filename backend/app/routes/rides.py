@@ -14,7 +14,7 @@ supabase = create_client(
 ).schema("dev")
 
 
-def _serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate):
+def _serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate, confirmed_passengers=None):
     """Builds the {ride, driver, estimate} shape shared by the list and detail endpoints."""
     return {
         "ride": {
@@ -35,7 +35,10 @@ def _serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate):
             "departure_time": ride["departure_time"],
             "price_per_passenger": ride["price_per_passenger"],
             "seats_available": ride["seats_available"],
-            "created_at": ride["created_at"]
+            "created_at": ride["created_at"],
+            # Everyone whose booking on this ride is 'accepted' - not 'requested',
+            # which hasn't been approved yet.
+            "confirmed_passengers": confirmed_passengers or [],
         },
 
         "driver": {
@@ -51,6 +54,45 @@ def _serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate):
             "co2_estimate_kg": estimate.get("co2_estimate_kg"),
         },
     }
+
+
+def _get_confirmed_passengers_by_ride_id(ride_ids):
+    """Looks up every 'accepted' ride_passengers row for the given rides, in one batch,
+    and returns {ride_id: [{"user_id", "name"}, ...]} - used to show who's on a ride."""
+    if not ride_ids:
+        return {}
+
+    passengers_response = (
+        supabase
+        .table("ride_passengers")
+        .select("ride_id, passenger_id")
+        .in_("ride_id", ride_ids)
+        .eq("ride_passenger_status", "accepted")
+        .execute()
+    )
+    passenger_rows = passengers_response.data
+
+    if not passenger_rows:
+        return {}
+
+    passenger_ids = list({row["passenger_id"] for row in passenger_rows})
+    users_response = (
+        supabase
+        .table("users")
+        .select("user_id, name")
+        .in_("user_id", passenger_ids)
+        .execute()
+    )
+    users_by_id = {u["user_id"]: u for u in users_response.data}
+
+    result = {}
+    for row in passenger_rows:
+        passenger = users_by_id.get(row["passenger_id"], {})
+        result.setdefault(row["ride_id"], []).append({
+            "user_id": row["passenger_id"],
+            "name": passenger.get("name"),
+        })
+    return result
 
 '''
 GET /api/rides
@@ -151,6 +193,10 @@ def get_rides():
             for user_id, ratings in reviews_by_user_id.items()
         }
 
+        confirmed_passengers_by_ride_id = _get_confirmed_passengers_by_ride_id(
+            [ride["ride_id"] for ride in rides_response.data]
+        )
+
         rides = []
 
         for ride in rides_response.data:
@@ -158,14 +204,17 @@ def get_rides():
             estimate = estimates_by_ride_id.get(ride_id, {})
 
             vehicle = vehicles_by_id[ride["vehicle_id"]]
-            
+
             driver_id = vehicle["user_id"]
             driver = users_by_id[driver_id]
-            
+
             driver_rating = driver_ratings_by_id.get(driver_id, 0)
             driver_rating_count = len(reviews_by_user_id.get(driver_id, []))
 
-            rides.append(_serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate))
+            rides.append(_serialize_ride(
+                ride, driver, driver_rating, driver_rating_count, estimate,
+                confirmed_passengers_by_ride_id.get(ride_id, []),
+            ))
 
         return jsonify(rides), 200
 
@@ -300,6 +349,8 @@ def get_my_rides():
             )
             estimates_by_ride_id = {e["ride_id"]: e for e in estimates_response.data}
 
+        confirmed_passengers_by_ride_id = _get_confirmed_passengers_by_ride_id(all_ride_ids)
+
         def build_entry(ride, role, passenger_status=None):
             vehicle = vehicles_by_id.get(ride["vehicle_id"], {})
             driver_id = vehicle.get("user_id")
@@ -308,8 +359,11 @@ def get_my_rides():
             driver_rating = sum(ratings) / len(ratings) if ratings else 0
             driver_rating_count = len(ratings)
             estimate = estimates_by_ride_id.get(ride["ride_id"], {})
+            confirmed_passengers = confirmed_passengers_by_ride_id.get(ride["ride_id"], [])
 
-            entry = _serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate)
+            entry = _serialize_ride(
+                ride, driver, driver_rating, driver_rating_count, estimate, confirmed_passengers
+            )
             entry["role"] = role
             if passenger_status:
                 entry["passenger_status"] = passenger_status
@@ -409,7 +463,11 @@ def get_ride(ride_id):
         driver_rating = sum(ratings) / len(ratings) if ratings else 0
         driver_rating_count = len(ratings)
 
-        return jsonify(_serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate)), 200
+        confirmed_passengers = _get_confirmed_passengers_by_ride_id([ride_id]).get(ride_id, [])
+
+        return jsonify(_serialize_ride(
+            ride, driver, driver_rating, driver_rating_count, estimate, confirmed_passengers
+        )), 200
 
     except Exception as e:
         return jsonify({"error": str(e)}), 500
@@ -882,6 +940,7 @@ def get_requests():
             .execute()
         )
         estimates_by_ride_id = {e["ride_id"]: e for e in estimates_response.data}
+        confirmed_passengers_by_ride_id = _get_confirmed_passengers_by_ride_id(list(rides_by_id.keys()))
 
         driver = users_by_id.get(driver_id, {})
         driver_rating, driver_rating_count = rating_for(driver_id)
@@ -890,10 +949,13 @@ def get_requests():
         for item in pending:
             ride = rides_by_id[item["ride_id"]]
             estimate = estimates_by_ride_id.get(ride["ride_id"], {})
+            confirmed_passengers = confirmed_passengers_by_ride_id.get(ride["ride_id"], [])
             passenger = users_by_id.get(item["passenger_id"], {})
             passenger_rating, passenger_rating_count = rating_for(item["passenger_id"])
 
-            entry = _serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate)
+            entry = _serialize_ride(
+                ride, driver, driver_rating, driver_rating_count, estimate, confirmed_passengers
+            )
             entry["ride_passenger_id"] = item["ride_passenger_id"]
             entry["requested_at"] = item["requested_at"]
             entry["passenger"] = {

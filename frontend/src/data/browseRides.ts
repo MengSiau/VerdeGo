@@ -61,6 +61,6 @@ export function mapRideWithDetailsToRide(item: RideWithDetails): Ride {
     price: ride.price_per_passenger,
     co2SavedKg: estimate.co2_estimate_kg ?? 0,
     co2EstimateKg: estimate.co2_estimate_kg ?? 0,
-    confirmedPassengers: [],
+    confirmedPassengers: ride.confirmed_passengers.map((p) => ({ name: p.name })),
   };
 }

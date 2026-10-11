@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Ride } from '@/src/data/rides';
 import { colors, fontFamily, fontSize, mapBg, radius } from '@/src/theme';
+import { formatJoinedPassengers } from '@/src/utils/formatPassengers';
 
 import { Avatar } from './Avatar';
 
@@ -43,7 +44,9 @@ export function MyRideCard({ ride, dateLabel, role, onPress, onReview, reviewed 
             <Text style={styles.driverName}>{ride.driverName}</Text>
             <Text style={styles.driverMeta}>
               {role === 'driver' ? (
-                `${ride.seats - ride.confirmedPassengers.length} seat${ride.seats - ride.confirmedPassengers.length === 1 ? '' : 's'} left`
+                // ride.seats is already "seats still open" - the backend decrements it
+                // as bookings get accepted, so it's not the vehicle's total capacity.
+                `${ride.seats} seat${ride.seats === 1 ? '' : 's'} left`
               ) : (
                 <>
                   Driver · {ride.rating.toFixed(1)} <Text style={styles.star}>★</Text>
@@ -63,6 +66,15 @@ export function MyRideCard({ ride, dateLabel, role, onPress, onReview, reviewed 
             {ride.pickup} → {ride.destination}
           </Text>
         </View>
+
+        {ride.confirmedPassengers.length > 0 && (
+          <View style={styles.passengersRow}>
+            <Ionicons name="people-outline" size={14} color={colors.neutral.gray500} />
+            <Text style={styles.passengersText}>
+              {formatJoinedPassengers(ride.confirmedPassengers.map((p) => p.name))} onboard
+            </Text>
+          </View>
+        )}
 
         <View style={styles.footerRow}>
           <View style={styles.co2Row}>
@@ -201,6 +213,17 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyRegular,
     fontSize: fontSize.sm,
     color: colors.neutral.gray700,
+  },
+  passengersRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  passengersText: {
+    fontFamily: fontFamily.bodyRegular,
+    fontSize: fontSize.xs,
+    color: colors.neutral.gray500,
   },
   footerRow: {
     marginTop: 12,
