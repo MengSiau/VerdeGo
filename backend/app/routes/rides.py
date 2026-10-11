@@ -174,11 +174,16 @@ def get_rides():
 GET /api/rides/mine
 
 Returns every ride the current user is involved in, as either a driver (rides on a
-vehicle they own) or a passenger (ride_passengers rows with status 'accepted' or
-'completed' - not 'requested', 'rejected' or 'cancelled', since those aren't a real
-booking). Each entry has the same {ride, driver, estimate} shape as the other endpoints,
-plus "role" ("driver" | "passenger") so the client doesn't have to re-derive it, and
-"passenger_status" on passenger-side entries.
+vehicle they own, excluding ones they've cancelled) or a passenger (ride_passengers rows
+with status 'accepted' or 'completed' - not 'requested', 'rejected' or 'cancelled', since
+those aren't a real booking). Each entry has the same {ride, driver, estimate} shape as
+the other endpoints, plus "role" ("driver" | "passenger") so the client doesn't have to
+re-derive it, and "passenger_status" on passenger-side entries.
+
+A cancelled ride (see PATCH /<ride_id>/cancel) drops off both sides automatically: the
+driver query excludes ride_status 'cancelled' directly, and cancelling also flips every
+live ride_passengers row to 'cancelled', which falls out of the passenger query's
+accepted/completed filter.
 
 Note: registered before /<ride_id> in this file, but Werkzeug matches literal path
 segments before variable ones regardless of declaration order, so "/mine" will never be
@@ -211,6 +216,7 @@ def get_my_rides():
                 .table("rides")
                 .select("*")
                 .in_("vehicle_id", my_vehicle_ids)
+                .neq("ride_status", "cancelled")
                 .execute()
             )
             driver_rides = driver_rides_response.data
@@ -407,6 +413,79 @@ def get_ride(ride_id):
         return jsonify({"error": str(e)}), 500
 
 '''
+PATCH /api/rides/<ride_id>/cancel
+
+Cancels a scheduled ride. Only the ride's driver (the owner of its vehicle) can cancel
+it - anyone else gets a 403. Only a 'scheduled' ride can be cancelled; an ongoing,
+completed, or already-cancelled ride returns a 400.
+
+Also flips every live ride_passengers row ('requested' or 'accepted') on this ride to
+'cancelled', so it drops out of every passenger's GET /api/rides/mine too, not just the
+driver's. The main feed (GET /api/rides) already only lists 'scheduled' rides, so a
+cancelled ride disappears from there for free.
+
+Usage: To be used by the "Cancel Ride" action on My Ride Details.
+'''
+@rides_bp.route("/<ride_id>/cancel", methods=["PATCH"])
+def cancel_ride(ride_id):
+    user = get_authenticated_user()
+
+    if not user:
+        return jsonify({"error": "Authentication required"}), 401
+
+    try:
+        ride_response = (
+            supabase
+            .table("rides")
+            .select("ride_id, vehicle_id, ride_status")
+            .eq("ride_id", ride_id)
+            .maybe_single()
+            .execute()
+        )
+
+        if not ride_response or not ride_response.data:
+            return jsonify({"error": "Ride not found"}), 404
+
+        ride = ride_response.data
+
+        vehicle_response = (
+            supabase
+            .table("vehicles")
+            .select("user_id")
+            .eq("vehicle_id", ride["vehicle_id"])
+            .maybe_single()
+            .execute()
+        )
+
+        if not vehicle_response or not vehicle_response.data or vehicle_response.data["user_id"] != user.id:
+            return jsonify({"error": "Only the ride's driver can cancel it"}), 403
+
+        if ride["ride_status"] != "scheduled":
+            return jsonify({"error": f"Cannot cancel a ride that is {ride['ride_status']}"}), 400
+
+        updated_response = (
+            supabase
+            .table("rides")
+            .update({"ride_status": "cancelled"})
+            .eq("ride_id", ride_id)
+            .execute()
+        )
+
+        (
+            supabase
+            .table("ride_passengers")
+            .update({"ride_passenger_status": "cancelled"})
+            .eq("ride_id", ride_id)
+            .in_("ride_passenger_status", ["requested", "accepted"])
+            .execute()
+        )
+
+        return jsonify(updated_response.data[0]), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+'''
 POST /api/rides
 Creates a new ride for the authenticated user.
 Request body should include:
@@ -418,6 +497,15 @@ Request body should include:
 - departure_time: Scheduled departure time (ISO 8601 format)
 - price_per_passenger: Price per passenger for the ride
 - seats_available: Number of available seats for the ride
+
+Optionally, if the client already has a real route estimate for this journey (e.g. from
+a routing API), it can also include all three of:
+- distance_km: Journey distance in km
+- duration_min: Journey duration in minutes
+- co2_estimate_kg: Estimated total trip CO2 in kg
+These are persisted as the ride's route_estimates row. All three must be present together
+(the table requires it) - a partial set is ignored and the estimate is simply left null.
+
 Returns the created ride details on success.
 
 Usage: To be used when a user wants to create a new ride offer.
@@ -494,7 +582,27 @@ def create_ride():
             .execute()
         )
 
-        return jsonify(response.data[0]), 201
+        ride = response.data[0]
+
+        # Optional: the client may already have a real distance/duration/CO2 for this
+        # journey (e.g. from a routing API) - persist it as the ride's route estimate so
+        # it doesn't just get thrown away. route_estimates requires all three together,
+        # so only insert if the caller sent the complete set.
+        estimate_fields = ("distance_km", "duration_min", "co2_estimate_kg")
+        if all(field in data for field in estimate_fields):
+            try:
+                supabase.table("route_estimates").insert({
+                    "ride_id": ride["ride_id"],
+                    "distance_km": data["distance_km"],
+                    "duration_min": data["duration_min"],
+                    "co2_estimate_kg": data["co2_estimate_kg"],
+                }).execute()
+            except Exception:
+                # The ride itself was created successfully - a failed estimate insert
+                # shouldn't fail the whole request, it just leaves the estimate null.
+                pass
+
+        return jsonify(ride), 201
 
     except Exception as e:
         return jsonify({

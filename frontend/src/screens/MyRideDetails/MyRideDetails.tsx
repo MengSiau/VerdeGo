@@ -1,10 +1,12 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { useState } from 'react';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
+import { cancelRide } from '@/src/api/rides';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { RideOverview } from '@/src/components/RideOverview';
 import { SecondaryButton } from '@/src/components/SecondaryButton';
+import { useCurrentUser } from '@/src/hooks/useCurrentUser';
 import { useRideDetails } from '@/src/hooks/useRideDetails';
 import { colors, fontFamily, fontSize } from '@/src/theme';
 
@@ -16,7 +18,9 @@ export function MyRideDetails() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { ride, loading, error, refresh } = useRideDetails(id);
+  const { user: currentUser } = useCurrentUser();
   const [cancelModalVisible, setCancelModalVisible] = useState(false);
+  const [cancelling, setCancelling] = useState(false);
 
   if (loading && !ride) {
     return (
@@ -37,28 +41,47 @@ export function MyRideDetails() {
     );
   }
 
+  // Only the driver can cancel the whole ride - a passenger withdrawing from a ride
+  // they've joined is a separate (not yet built) feature.
+  const isDriver = currentUser?.user_id === ride.driverId;
+
+  const handleConfirmCancel = async () => {
+    if (!id) return;
+    setCancelling(true);
+    try {
+      await cancelRide(id);
+      setCancelModalVisible(false);
+      router.push('/my-rides');
+    } catch (e) {
+      Alert.alert('Unable to cancel ride', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setCancelling(false);
+    }
+  };
+
   return (
     <>
       <RideOverview
         ride={ride}
         actions={
-          <SecondaryButton
-            variant="destructive"
-            label="Cancel Ride"
-            onPress={() => setCancelModalVisible(true)}
-          />
+          isDriver ? (
+            <SecondaryButton
+              variant="destructive"
+              label="Cancel Ride"
+              onPress={() => setCancelModalVisible(true)}
+            />
+          ) : null
         }
       />
-      <CancelRideModal
-        visible={cancelModalVisible}
-        ride={ride}
-        onKeep={() => setCancelModalVisible(false)}
-        onConfirmCancel={() => {
-          // TODO: submit the actual cancellation to backend once it exists.
-          setCancelModalVisible(false);
-          router.push('/my-rides');
-        }}
-      />
+      {isDriver && (
+        <CancelRideModal
+          visible={cancelModalVisible}
+          ride={ride}
+          confirming={cancelling}
+          onKeep={() => setCancelModalVisible(false)}
+          onConfirmCancel={handleConfirmCancel}
+        />
+      )}
     </>
   );
 }

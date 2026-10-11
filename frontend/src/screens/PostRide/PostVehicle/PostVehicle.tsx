@@ -111,7 +111,13 @@ export function PostVehicle() {
             </Text>
           )}
 
-          {origin && routeError && (
+          {origin && routeError === 'Routing is not configured' && (
+            <Text style={styles.subtitle}>
+              Google API key is not confiured. 
+            </Text>
+          )}
+
+          {origin && routeError && routeError !== 'Routing is not configured' && (
             <Text style={styles.subtitle}>
               Couldn&apos;t calculate the journey distance. Check your connection and try again.
             </Text>

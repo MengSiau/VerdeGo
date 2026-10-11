@@ -103,6 +103,9 @@ export function PostConfirm() {
         departure_time: departureIso,
         price_per_passenger: Number(fare.toFixed(2)),
         seats_available: seats,
+        distance_km: distanceKm,
+        duration_min: draft.durationMinutes,
+        co2_estimate_kg: Number(co2Total.toFixed(2)),
       });
       router.push('/home');
     } catch (e) {

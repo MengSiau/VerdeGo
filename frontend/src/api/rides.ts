@@ -56,6 +56,12 @@ export interface CreateRideRequest {
     departure_time: string;
     price_per_passenger: number;
     seats_available: number;
+    // Optional: if the client already has a real route estimate (e.g. from a routing
+    // API), all three persist it as the ride's route_estimates row. A partial set is
+    // ignored server-side, so don't send one or two without the rest.
+    distance_km?: number;
+    duration_min?: number;
+    co2_estimate_kg?: number;
 }
 
 export function getRides(): Promise<RideWithDetails[]> {
@@ -74,5 +80,13 @@ export function createRide(data: CreateRideRequest): Promise<Ride> {
     return apiFetch<Ride>('/api/rides', {
         method: 'POST',
         body: JSON.stringify(data),
+    });
+}
+
+// Only the ride's driver can call this - the backend 403s otherwise. Also cancels every
+// live booking on the ride, so it drops off each passenger's My Rides too.
+export function cancelRide(rideId: string): Promise<Ride> {
+    return apiFetch<Ride>(`/api/rides/${rideId}/cancel`, {
+        method: 'PATCH',
     });
 }
