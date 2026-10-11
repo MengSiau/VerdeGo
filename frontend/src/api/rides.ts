@@ -90,3 +90,20 @@ export function cancelRide(rideId: string): Promise<Ride> {
         method: 'PATCH',
     });
 }
+
+export interface RidePassenger {
+    ride_passenger_id: string;
+    ride_id: string;
+    passenger_id: string;
+    ride_passenger_status: 'requested' | 'accepted' | 'rejected' | 'cancelled' | 'completed';
+    requested_at: string;
+    responded_at: string | null;
+}
+
+// Creates (or re-opens, if previously rejected/cancelled) a 'requested' booking on this
+// ride. Doesn't count toward the ride yet - that only happens once the driver accepts it.
+export function requestToJoinRide(rideId: string): Promise<RidePassenger> {
+    return apiFetch<RidePassenger>(`/api/rides/${rideId}/request`, {
+        method: 'POST',
+    });
+}

@@ -1,4 +1,5 @@
 import os
+from datetime import datetime, timezone
 
 from flask import Blueprint, jsonify, request
 from supabase import create_client
@@ -54,8 +55,8 @@ def _serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate):
 '''
 GET /api/rides
 
-Returns a list of rides that are scheduled and not owned by the current user.
-Each ride includes:
+Returns a list of rides that are scheduled, have at least one seat free, and are not
+owned by the current user. Each ride includes:
 - Ride details (origin, destination, departure time, price, seats available)
 - Driver details (name, rating, rating count)
 
@@ -88,6 +89,7 @@ def get_rides():
             .table("rides")
             .select("*")
             .eq("ride_status", "scheduled")
+            .gt("seats_available", 0)
             .not_.in_("vehicle_id", own_vehicle_ids)
             .execute()
         )
@@ -608,3 +610,325 @@ def create_ride():
         return jsonify({
             "error": str(e)
         }), 400
+
+'''
+POST /api/rides/<ride_id>/request
+
+Passenger requests to join a scheduled ride. Creates a ride_passengers row with status
+'requested' - the driver sees it via GET /api/rides/requests and accepts or declines it.
+Only once accepted does the passenger actually count toward the ride (see the accept
+route below, which decrements seats_available) - that's the only point reflected in
+GET /api/rides/mine for the passenger.
+
+Rules:
+- The ride must exist, be 'scheduled', and have at least one seat free.
+- You can't request your own ride (checked via vehicle ownership).
+- Only one ride_passengers row per (ride, passenger) ever exists (DB-enforced via a
+  UNIQUE constraint) - requesting again after a previous 'rejected' or 'cancelled'
+  response re-opens that same row rather than erroring; requesting again while already
+  'requested' or 'accepted' is rejected as a duplicate.
+
+Usage: To be used by the "Request to Join" button on the ride details screen.
+'''
+@rides_bp.route("/<ride_id>/request", methods=["POST"])
+def request_to_join(ride_id):
+    user = get_authenticated_user()
+
+    if not user:
+        return jsonify({"error": "Authentication required"}), 401
+
+    try:
+        ride_response = (
+            supabase
+            .table("rides")
+            .select("ride_id, vehicle_id, ride_status, seats_available")
+            .eq("ride_id", ride_id)
+            .maybe_single()
+            .execute()
+        )
+
+        if not ride_response or not ride_response.data:
+            return jsonify({"error": "Ride not found"}), 404
+
+        ride = ride_response.data
+
+        if ride["ride_status"] != "scheduled":
+            return jsonify({"error": f"Cannot request a ride that is {ride['ride_status']}"}), 400
+
+        if ride["seats_available"] <= 0:
+            return jsonify({"error": "This ride is full"}), 409
+
+        vehicle_response = (
+            supabase
+            .table("vehicles")
+            .select("user_id")
+            .eq("vehicle_id", ride["vehicle_id"])
+            .maybe_single()
+            .execute()
+        )
+
+        if vehicle_response and vehicle_response.data and vehicle_response.data["user_id"] == user.id:
+            return jsonify({"error": "You can't request to join your own ride"}), 400
+
+        existing_response = (
+            supabase
+            .table("ride_passengers")
+            .select("ride_passenger_id, ride_passenger_status")
+            .eq("ride_id", ride_id)
+            .eq("passenger_id", user.id)
+            .maybe_single()
+            .execute()
+        )
+        existing = existing_response.data if existing_response and existing_response.data else None
+
+        if existing and existing["ride_passenger_status"] in ("requested", "accepted"):
+            return jsonify({"error": "You've already requested to join this ride"}), 409
+
+        if existing:
+            # Previously rejected/cancelled - let them try again on the same row.
+            response = (
+                supabase
+                .table("ride_passengers")
+                .update({"ride_passenger_status": "requested", "responded_at": None})
+                .eq("ride_passenger_id", existing["ride_passenger_id"])
+                .execute()
+            )
+        else:
+            response = (
+                supabase
+                .table("ride_passengers")
+                .insert({
+                    "ride_id": ride_id,
+                    "passenger_id": user.id,
+                    "ride_passenger_status": "requested",
+                })
+                .execute()
+            )
+
+        return jsonify(response.data[0]), 201
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+'''
+GET /api/rides/requests
+
+Returns every pending ('requested') ride_passengers row across every ride the current
+user drives, each with the same {ride, driver, estimate} shape as the other endpoints
+plus "passenger" (name, rating, rating_count), "ride_passenger_id", and "requested_at" -
+everything the Passenger Requests screen needs to group requests by ride and render them.
+
+Usage: To be used by the Passenger Requests screen.
+'''
+@rides_bp.route("/requests", methods=["GET"])
+def get_requests():
+    user = get_authenticated_user()
+
+    if not user:
+        return jsonify({"error": "Authentication required"}), 401
+
+    try:
+        my_vehicles_response = (
+            supabase
+            .table("vehicles")
+            .select("vehicle_id")
+            .eq("user_id", user.id)
+            .execute()
+        )
+        my_vehicle_ids = [v["vehicle_id"] for v in my_vehicles_response.data]
+
+        if not my_vehicle_ids:
+            return jsonify([]), 200
+
+        rides_response = (
+            supabase
+            .table("rides")
+            .select("*")
+            .in_("vehicle_id", my_vehicle_ids)
+            .execute()
+        )
+        rides_by_id = {r["ride_id"]: r for r in rides_response.data}
+
+        if not rides_by_id:
+            return jsonify([]), 200
+
+        requests_response = (
+            supabase
+            .table("ride_passengers")
+            .select("ride_passenger_id, ride_id, passenger_id, requested_at")
+            .in_("ride_id", list(rides_by_id.keys()))
+            .eq("ride_passenger_status", "requested")
+            .execute()
+        )
+        pending = requests_response.data
+
+        if not pending:
+            return jsonify([]), 200
+
+        driver_id = user.id
+        passenger_ids = list({p["passenger_id"] for p in pending})
+
+        users_response = (
+            supabase
+            .table("users")
+            .select("user_id, name")
+            .in_("user_id", passenger_ids + [driver_id])
+            .execute()
+        )
+        users_by_id = {u["user_id"]: u for u in users_response.data}
+
+        reviews_response = (
+            supabase
+            .table("reviews")
+            .select("reviewee_id, rating")
+            .in_("reviewee_id", passenger_ids + [driver_id])
+            .execute()
+        )
+        ratings_by_user_id = {}
+        for review in reviews_response.data:
+            ratings_by_user_id.setdefault(review["reviewee_id"], []).append(review["rating"])
+
+        def rating_for(user_id):
+            ratings = ratings_by_user_id.get(user_id, [])
+            avg = sum(ratings) / len(ratings) if ratings else 0
+            return avg, len(ratings)
+
+        estimates_response = (
+            supabase
+            .table("route_estimates")
+            .select("*")
+            .in_("ride_id", list(rides_by_id.keys()))
+            .execute()
+        )
+        estimates_by_ride_id = {e["ride_id"]: e for e in estimates_response.data}
+
+        driver = users_by_id.get(driver_id, {})
+        driver_rating, driver_rating_count = rating_for(driver_id)
+
+        results = []
+        for item in pending:
+            ride = rides_by_id[item["ride_id"]]
+            estimate = estimates_by_ride_id.get(ride["ride_id"], {})
+            passenger = users_by_id.get(item["passenger_id"], {})
+            passenger_rating, passenger_rating_count = rating_for(item["passenger_id"])
+
+            entry = _serialize_ride(ride, driver, driver_rating, driver_rating_count, estimate)
+            entry["ride_passenger_id"] = item["ride_passenger_id"]
+            entry["requested_at"] = item["requested_at"]
+            entry["passenger"] = {
+                "user_id": passenger.get("user_id"),
+                "name": passenger.get("name"),
+                "rating": passenger_rating,
+                "rating_count": passenger_rating_count,
+            }
+            results.append(entry)
+
+        return jsonify(results), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+
+def _respond_to_request(ride_passenger_id, new_status):
+    """Shared accept/decline logic: validates the caller is the ride's driver and the
+    request is still pending, then updates its status (and, for accept, the ride's
+    seats_available)."""
+    user = get_authenticated_user()
+
+    if not user:
+        return jsonify({"error": "Authentication required"}), 401
+
+    try:
+        request_response = (
+            supabase
+            .table("ride_passengers")
+            .select("ride_passenger_id, ride_id, ride_passenger_status")
+            .eq("ride_passenger_id", ride_passenger_id)
+            .maybe_single()
+            .execute()
+        )
+
+        if not request_response or not request_response.data:
+            return jsonify({"error": "Request not found"}), 404
+
+        req = request_response.data
+
+        if req["ride_passenger_status"] != "requested":
+            return jsonify({"error": f"This request is already {req['ride_passenger_status']}"}), 400
+
+        ride_response = (
+            supabase
+            .table("rides")
+            .select("ride_id, vehicle_id, seats_available")
+            .eq("ride_id", req["ride_id"])
+            .maybe_single()
+            .execute()
+        )
+
+        if not ride_response or not ride_response.data:
+            return jsonify({"error": "Ride not found"}), 404
+
+        ride = ride_response.data
+
+        vehicle_response = (
+            supabase
+            .table("vehicles")
+            .select("user_id")
+            .eq("vehicle_id", ride["vehicle_id"])
+            .maybe_single()
+            .execute()
+        )
+
+        if not vehicle_response or not vehicle_response.data or vehicle_response.data["user_id"] != user.id:
+            return jsonify({"error": "Only the ride's driver can respond to this request"}), 403
+
+        if new_status == "accepted":
+            if ride["seats_available"] <= 0:
+                return jsonify({"error": "This ride is full"}), 409
+
+            supabase.table("rides").update(
+                {"seats_available": ride["seats_available"] - 1}
+            ).eq("ride_id", ride["ride_id"]).execute()
+
+        updated_response = (
+            supabase
+            .table("ride_passengers")
+            .update({
+                "ride_passenger_status": new_status,
+                "responded_at": datetime.now(timezone.utc).isoformat(),
+            })
+            .eq("ride_passenger_id", ride_passenger_id)
+            .execute()
+        )
+
+        return jsonify(updated_response.data[0]), 200
+
+    except Exception as e:
+        return jsonify({"error": str(e)}), 500
+
+'''
+PATCH /api/rides/requests/<ride_passenger_id>/accept
+
+Driver accepts a pending passenger request. Only the ride's driver can do this, and only
+while the request is still 'requested' and the ride has a free seat. Sets the request to
+'accepted' and decrements the ride's seats_available by one - this is the only point at
+which a passenger actually counts as "on" the ride (reflected in GET /api/rides/mine).
+
+Usage: To be used by the Accept button on the Passenger Requests screen.
+'''
+@rides_bp.route("/requests/<ride_passenger_id>/accept", methods=["PATCH"])
+def accept_request(ride_passenger_id):
+    return _respond_to_request(ride_passenger_id, "accepted")
+
+'''
+PATCH /api/rides/requests/<ride_passenger_id>/decline
+
+Driver declines a pending passenger request. Only the ride's driver can do this, and
+only while the request is still 'requested'. Sets it to 'rejected' - doesn't touch
+seats_available since the passenger was never counted.
+
+Usage: To be used by the Decline button on the Passenger Requests screen.
+'''
+@rides_bp.route("/requests/<ride_passenger_id>/decline", methods=["PATCH"])
+def decline_request(ride_passenger_id):
+    return _respond_to_request(ride_passenger_id, "rejected")

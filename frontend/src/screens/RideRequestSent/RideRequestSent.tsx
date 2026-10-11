@@ -1,24 +1,34 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/src/components/PrimaryButton';
-import { useRidesStore } from '@/src/data/RidesStore';
+import { useRideDetails } from '@/src/hooks/useRideDetails';
 import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
 
 export function RideRequestSent() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { rides } = useRidesStore();
-  const ride = rides.find((r) => r.id === id);
+  const { ride, loading, error, refresh } = useRideDetails(id);
 
-  if (!ride) {
+  if (loading && !ride) {
     return (
       <View style={styles.notFound}>
-        <Text style={styles.notFoundText}>Ride not found.</Text>
+        <ActivityIndicator size="large" color={colors.brand.verde600} />
+      </View>
+    );
+  }
+
+  if (error || !ride) {
+    return (
+      <View style={styles.notFound}>
+        <Text style={styles.notFoundText}>{error ?? 'Ride not found.'}</Text>
+        <View style={styles.retryButton}>
+          <PrimaryButton label="Try Again" onPress={() => void refresh()} />
+        </View>
       </View>
     );
   }
@@ -78,11 +88,17 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 12,
   },
   notFoundText: {
     fontFamily: fontFamily.bodyRegular,
     fontSize: fontSize.sm,
     color: colors.neutral.gray500,
+    textAlign: 'center',
+  },
+  retryButton: {
+    alignSelf: 'stretch',
   },
   content: {
     flex: 1,

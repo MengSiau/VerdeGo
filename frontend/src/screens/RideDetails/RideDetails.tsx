@@ -1,6 +1,8 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
+import { requestToJoinRide } from '@/src/api/rides';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { RideOverview } from '@/src/components/RideOverview';
 import { useRideDetails } from '@/src/hooks/useRideDetails';
@@ -10,6 +12,20 @@ export function RideDetails() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
   const { ride, loading, error, refresh } = useRideDetails(id);
+  const [requesting, setRequesting] = useState(false);
+
+  const handleRequestToJoin = async () => {
+    if (!id) return;
+    setRequesting(true);
+    try {
+      await requestToJoinRide(id);
+      router.push(`/ride-request-sent/${id}`);
+    } catch (e) {
+      Alert.alert('Unable to send request', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setRequesting(false);
+    }
+  };
 
   if (loading && !ride) {
     return (
@@ -34,8 +50,11 @@ export function RideDetails() {
     <RideOverview
       ride={ride}
       actions={
-        // TODO: submit the actual join request to backend once it exists.
-        <PrimaryButton label="Request to Join" onPress={() => router.push(`/ride-request-sent/${ride.id}`)} />
+        <PrimaryButton
+          label={requesting ? 'Sending Request...' : 'Request to Join'}
+          disabled={requesting}
+          onPress={handleRequestToJoin}
+        />
       }
     />
   );
