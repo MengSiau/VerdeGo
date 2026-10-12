@@ -25,11 +25,22 @@ export function MyRides() {
   const [tab, setTab] = useState<RidesTab>('upcoming');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
 
+  const { allRides, myRides, currentUserId } = useRidesStore();
+
   const upcomingRides = useMemo(() => {
     const entries: { booking: MyRideBooking; ride: Ride; role: 'driver' | 'passenger' }[] = [];
+
+    // Rides you're driving come from the server, not from local bookings.
+    for (const ride of myRides) {
+      entries.push({ booking: { rideId: ride.id, dateLabel: ride.date }, ride, role: 'driver' });
+    }
+
     for (const booking of myBookings) {
-      const ride = rides.find((r) => r.id === booking.rideId);
-      if (ride) entries.push({ booking, ride, role: ride.driverId === CURRENT_USER_ID ? 'driver' : 'passenger' });
+      const ride = allRides.find((r) => r.id === booking.rideId);
+      // Skip anything already listed as a ride you're driving.
+      if (ride && !myRides.some((own) => own.id === ride.id)) {
+        entries.push({ booking, ride, role: 'passenger' });
+      }
     }
 
     const filtered = entries.filter((entry) => {
@@ -38,9 +49,8 @@ export function MyRides() {
       return true;
     });
 
-    // Rides you're driving surface first - it's your own posting, not just something you joined.
     return filtered.sort((a, b) => (a.role === b.role ? 0 : a.role === 'driver' ? -1 : 1));
-  }, [rides, myBookings, roleFilter]);
+  }, [allRides, myRides, myBookings, roleFilter]);
 
   return (
     <View style={styles.fill}>

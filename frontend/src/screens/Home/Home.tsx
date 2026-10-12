@@ -25,14 +25,11 @@ const SORT_LABEL: Record<SortFilter, string> = {
 export function Home() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { rides } = useRidesStore();
   const [sort, setSort] = useState<SortFilter>('eco');
   const { signOut } = useAuth();
 
-  // Don't show the viewer their own posted rides in the browse feed - you wouldn't
-  // request to join a ride you're the one offering.
-  const browsableRides = useMemo(() => rides.filter((ride) => ride.driverId !== CURRENT_USER_ID), [rides]);
-
+  const { rides, loading, error } = useRidesStore();
+  const browsableRides = rides;
   const totalCo2Saved = useMemo(
     () => browsableRides.reduce((sum, ride) => sum + calculateCo2SavedKg(ride.distanceKm, ride.confirmedPassengers.length), 0),
     [browsableRides]

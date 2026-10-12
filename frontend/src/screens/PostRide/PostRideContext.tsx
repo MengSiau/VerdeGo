@@ -35,10 +35,7 @@ export type PostRideDraft = {
   destinationLat?: number;
   destinationLng?: number;
   direction?: RideDirection;
-  date?: string;
-  hour?: string;
-  minute?: string;
-  period?: 'AM' | 'PM';
+  departureIso?: string;
   seats?: number;
   fuelType?: FuelType;
   fareAdjustmentPercent?: number;

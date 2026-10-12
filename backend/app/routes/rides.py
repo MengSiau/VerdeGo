@@ -1,6 +1,6 @@
 import os
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from supabase import create_client
 
 from app.auth import get_authenticated_user
@@ -19,6 +19,11 @@ def get_rides():
     if not user:
         return jsonify({"error": "Authentication required"}), 401
 
+    # ?mine=true returns the rides this user is driving instead of excluding
+    # them. Without it a driver cannot see their own posted ride anywhere in
+    # the app, because the browse feed deliberately filters it out.
+    mine = request.args.get("mine", "").lower() in ("1", "true", "yes")
+
     try:
         # Get vehicles owned by the current user
         user_vehicles_response = (
@@ -34,14 +39,27 @@ def get_rides():
             for vehicle in user_vehicles_response.data
         ]
 
-        rides_response = (
+        # Someone who owns no vehicles cannot be driving anything.
+        if mine and not own_vehicle_ids:
+            return jsonify([]), 200
+
+        rides_query = (
             supabase
             .table("rides")
             .select("*")
             .eq("ride_status", "scheduled")
-            .not_.in_("vehicle_id", own_vehicle_ids)
-            .execute()
         )
+
+        if mine:
+            rides_query = rides_query.in_("vehicle_id", own_vehicle_ids)
+        elif own_vehicle_ids:
+            # not_.in_ with an empty list produces invalid SQL, so only exclude
+            # when the user actually owns vehicles. A new user owns none.
+            rides_query = rides_query.not_.in_("vehicle_id", own_vehicle_ids)
+
+        # Soonest first - without an explicit order Postgres returns rows in
+        # whatever order it finds them, so the feed shuffles between loads.
+        rides_response = rides_query.order("departure_time").execute()
 
         estimates_response = (
             supabase
@@ -89,10 +107,10 @@ def get_rides():
         reviews_by_user_id = {}
         for review in reviews_response.data:
             reviewee_id = review["reviewee_id"]
-            
+
             if reviewee_id not in reviews_by_user_id:
                 reviews_by_user_id[reviewee_id] = []
-            
+
             reviews_by_user_id[reviewee_id].append(review["rating"])
 
         driver_ratings_by_id = {
@@ -106,11 +124,19 @@ def get_rides():
             ride_id = ride["ride_id"]
             estimate = estimates_by_ride_id.get(ride_id, {})
 
-            vehicle = vehicles_by_id[ride["vehicle_id"]]
-            
+            vehicle = vehicles_by_id.get(ride["vehicle_id"])
+
+            # A ride whose vehicle has been deleted can't show a driver, so skip
+            # it rather than raising a KeyError and failing the whole feed.
+            if not vehicle:
+                continue
+
             driver_id = vehicle["user_id"]
-            driver = users_by_id[driver_id]
-            
+            driver = users_by_id.get(driver_id)
+
+            if not driver:
+                continue
+
             driver_rating = driver_ratings_by_id.get(driver_id, 0)
             driver_rating_count = len(reviews_by_user_id.get(driver_id, []))
 
@@ -119,7 +145,7 @@ def get_rides():
                     "ride_id": ride["ride_id"],
                     "vehicle_id": ride["vehicle_id"],
                     "ride_status": ride["ride_status"],
-                    
+
                     "origin": {
                         "lat": ride["origin_lat"],
                         "lng": ride["origin_lng"],
@@ -129,6 +155,11 @@ def get_rides():
                         "lat": ride["destination_lat"],
                         "lng": ride["destination_lng"],
                     },
+
+                    # Display labels stored alongside the coordinates. See
+                    # database/003_ride_labels.sql.
+                    "origin_label": ride.get("origin_label"),
+                    "destination_label": ride.get("destination_label"),
 
                     "departure_time": ride["departure_time"],
                     "price_per_passenger": ride["price_per_passenger"],
@@ -142,7 +173,7 @@ def get_rides():
                     "rating": driver_rating,
                     "rating_count": driver_rating_count,
                 },
-                
+
                 "estimate": {
                     "distance_km": estimate.get("distance_km"),
                     "duration_min": estimate.get("duration_min"),
@@ -152,8 +183,11 @@ def get_rides():
 
         return jsonify(rides), 200
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        # Logged rather than returned - matching vehicles.py, so database
+        # internals don't reach the client. The detail is in the Flask console.
+        current_app.logger.exception("Failed to load rides")
+        return jsonify({"error": "Unable to load rides"}), 500
 
 @rides_bp.route("", methods=["POST"])
 def create_ride():
@@ -176,6 +210,13 @@ def create_ride():
         "departure_time",
         "price_per_passenger",
         "seats_available",
+        # route_estimates has NOT NULL on all three, and every screen that shows
+        # a ride reads them. The client already has these from the Routes API
+        # and the vehicle's emissions factor, so it sends them rather than the
+        # server recomputing.
+        "distance_km",
+        "duration_min",
+        "co2_estimate_kg",
     ]
 
     missing_fields = [
@@ -211,6 +252,8 @@ def create_ride():
         "origin_lng": data["origin_lng"],
         "destination_lat": data["destination_lat"],
         "destination_lng": data["destination_lng"],
+        "origin_label": data.get("origin_label"),
+        "destination_label": data.get("destination_label"),
         "departure_time": data["departure_time"],
         "price_per_passenger": data["price_per_passenger"],
         "seats_available": data["seats_available"],
@@ -224,9 +267,35 @@ def create_ride():
             .execute()
         )
 
-        return jsonify(response.data[0]), 201
+        ride = response.data[0]
 
-    except Exception as e:
-        return jsonify({
-            "error": str(e)
-        }), 400
+        try:
+            (
+                supabase
+                .table("route_estimates")
+                .insert({
+                    "ride_id": ride["ride_id"],
+                    "distance_km": data["distance_km"],
+                    "duration_min": data["duration_min"],
+                    "co2_estimate_kg": data["co2_estimate_kg"],
+                })
+                .execute()
+            )
+        except Exception:
+            # Roll the ride back rather than leaving an orphan with no estimate.
+            # A ride with null distance renders as a blank card everywhere, so a
+            # failed post is the better outcome.
+            (
+                supabase
+                .table("rides")
+                .delete()
+                .eq("ride_id", ride["ride_id"])
+                .execute()
+            )
+            raise
+
+        return jsonify(ride), 201
+
+    except Exception:
+        current_app.logger.exception("Failed to create ride")
+        return jsonify({"error": "Unable to post this ride"}), 400
