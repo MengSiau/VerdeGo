@@ -1,120 +1,121 @@
 import { Ionicons } from '@expo/vector-icons';
 import DateTimePicker, { type DateTimePickerEvent } from '@react-native-community/datetimepicker';
 import { useRouter } from 'expo-router';
-import { useState, type ReactNode } from 'react';
+import { useEffect, useMemo, useState, type ReactNode } from 'react';
 import { Modal, Platform, Pressable, StyleSheet, Text, View } from 'react-native';
 
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
+import { defaultDeparture, formatRideDate, isSameDay } from '@/src/utils/datetime';
 
 import { usePostRideDraft } from '../PostRideContext';
 import { PostRideHeader } from '../PostRideHeader';
 
-const MONTH_LABEL = 'Aug';
-const WEEK_DAYS = [
-  { dow: 'Mon', day: 11 },
-  { dow: 'Tue', day: 12 },
-  { dow: 'Wed', day: 13 },
-  { dow: 'Thu', day: 14 },
-  { dow: 'Fri', day: 15 },
-  { dow: 'Sat', day: 16 },
-  { dow: 'Sun', day: 17 },
-];
-const DEFAULT_DAY_INDEX = 2; // Wed 13, matching the rest of the app's demo date
-
-const HOURS = Array.from({ length: 12 }, (_, i) => String(i + 1).padStart(2, '0'));
-const MINUTES = ['00', '15', '30', '45'];
+const DAYS_SHOWN = 7;
+const MINUTE_STEPS = [0, 15, 30, 45];
 const MAX_SEATS = 4;
 const MIN_SEATS = 1;
 
-function formatDate(dow: string, day: number) {
-  return `${dow}, ${MONTH_LABEL} ${day}`;
-}
-
-function cycle(options: string[], current: string) {
-  const index = options.indexOf(current);
-  return options[(index + 1) % options.length];
-}
-
-// Demo data is fixed to Aug 2025 throughout the app - build a real Date for the native picker
-// from our string fields, all anchored to that same fixed month/year.
-function buildDate(day: number, hour: string, minute: string, period: 'AM' | 'PM') {
-  const date = new Date(2025, 7, day);
-  let hours = parseInt(hour, 10) % 12;
-  if (period === 'PM') hours += 12;
-  date.setHours(hours, parseInt(minute, 10), 0, 0);
-  return date;
-}
-
-function to12Hour(date: Date) {
-  const period: 'AM' | 'PM' = date.getHours() >= 12 ? 'PM' : 'AM';
-  let hours = date.getHours() % 12;
-  if (hours === 0) hours = 12;
-  return {
-    hour: String(hours).padStart(2, '0'),
-    minute: String(date.getMinutes()).padStart(2, '0'),
-    period,
-  };
-}
-
 type TimeField = 'hour' | 'minute' | 'period';
+
+/** The next seven days starting today, so the strip is never in the past. */
+function buildWeek(from: Date): Date[] {
+  const start = new Date(from);
+  start.setHours(0, 0, 0, 0);
+
+  return Array.from({ length: DAYS_SHOWN }, (_, index) => {
+    const day = new Date(start);
+    day.setDate(start.getDate() + index);
+    return day;
+  });
+}
 
 export function PostDatetime() {
   const router = useRouter();
   const { draft, updateDraft } = usePostRideDraft();
-  const [selectedDayIndex, setSelectedDayIndex] = useState<number | null>(DEFAULT_DAY_INDEX);
+
   const [focusedField, setFocusedField] = useState<TimeField | null>('minute');
   const [datePickerVisible, setDatePickerVisible] = useState(false);
   const [timePickerVisible, setTimePickerVisible] = useState(false);
-  const [tempDate, setTempDate] = useState(() => new Date(2025, 7, 13, 8, 15));
+  const [tempDate, setTempDate] = useState(() => defaultDeparture());
 
-  const hour = draft.hour ?? '08';
-  const minute = draft.minute ?? '15';
-  const period = draft.period ?? 'AM';
+  // The week is built once per mount rather than per render, so it can't shift
+  // underneath the user if they happen to be mid-flow at midnight.
+  const week = useMemo(() => buildWeek(new Date()), []);
+
+  // Seed the draft the first time this screen opens. Guarded on the field
+  // itself, so it writes once and never loops.
+  useEffect(() => {
+    if (!draft.departureIso) {
+      updateDraft({ departureIso: defaultDeparture().toISOString() });
+    }
+  }, [draft.departureIso, updateDraft]);
+
+  const departure = useMemo(
+    () => (draft.departureIso ? new Date(draft.departureIso) : defaultDeparture()),
+    [draft.departureIso],
+  );
+
   const seats = draft.seats ?? 2;
-  const currentDay = selectedDayIndex !== null ? WEEK_DAYS[selectedDayIndex].day : 13;
 
-  const selectDay = (index: number) => {
-    setSelectedDayIndex(index);
-    const day = WEEK_DAYS[index];
-    updateDraft({ date: formatDate(day.dow, day.day) });
+  const setDeparture = (next: Date) => updateDraft({ departureIso: next.toISOString() });
+
+  const selectDay = (day: Date) => {
+    const next = new Date(day);
+    next.setHours(departure.getHours(), departure.getMinutes(), 0, 0);
+    setDeparture(next);
   };
 
+  // Cycles 1-12 while leaving AM/PM alone, matching the old string-cycling
+  // behaviour the screen was designed around.
   const cycleHour = () => {
     setFocusedField('hour');
-    updateDraft({ hour: cycle(HOURS, hour) });
+    const isPm = departure.getHours() >= 12;
+    const next12 = (departure.getHours() % 12) + 1;
+    const next = new Date(departure);
+    next.setHours((next12 % 12) + (isPm ? 12 : 0));
+    setDeparture(next);
   };
+
   const cycleMinute = () => {
     setFocusedField('minute');
-    updateDraft({ minute: cycle(MINUTES, minute) });
+    const currentIndex = MINUTE_STEPS.indexOf(departure.getMinutes());
+    const nextMinute = MINUTE_STEPS[(currentIndex + 1) % MINUTE_STEPS.length];
+    const next = new Date(departure);
+    next.setMinutes(nextMinute);
+    setDeparture(next);
   };
+
   const cyclePeriod = () => {
     setFocusedField('period');
-    updateDraft({ period: period === 'AM' ? 'PM' : 'AM' });
+    const next = new Date(departure);
+    next.setHours((departure.getHours() + 12) % 24);
+    setDeparture(next);
   };
 
   const adjustSeats = (delta: number) => {
-    const next = Math.min(MAX_SEATS, Math.max(MIN_SEATS, seats + delta));
-    updateDraft({ seats: next });
+    updateDraft({ seats: Math.min(MAX_SEATS, Math.max(MIN_SEATS, seats + delta)) });
   };
 
   const openDatePicker = () => {
-    setTempDate(buildDate(currentDay, hour, minute, period));
+    setTempDate(departure);
     setDatePickerVisible(true);
   };
   const openTimePicker = () => {
-    setTempDate(buildDate(currentDay, hour, minute, period));
+    setTempDate(departure);
     setTimePickerVisible(true);
   };
 
   const applyPickedDate = (date: Date) => {
-    const formatted = date.toLocaleDateString('en-US', { weekday: 'short', month: 'short', day: 'numeric' });
-    updateDraft({ date: formatted });
-    const matchIndex = WEEK_DAYS.findIndex((d) => d.day === date.getDate());
-    setSelectedDayIndex(matchIndex >= 0 ? matchIndex : null);
+    const next = new Date(date);
+    next.setHours(departure.getHours(), departure.getMinutes(), 0, 0);
+    setDeparture(next);
   };
+
   const applyPickedTime = (date: Date) => {
-    updateDraft(to12Hour(date));
+    const next = new Date(departure);
+    next.setHours(date.getHours(), date.getMinutes(), 0, 0);
+    setDeparture(next);
     setFocusedField(null);
   };
 
@@ -132,9 +133,9 @@ export function PostDatetime() {
     if (event.type === 'set' && date) applyPickedTime(date);
   };
 
-  const selectedDay = WEEK_DAYS[selectedDayIndex ?? DEFAULT_DAY_INDEX];
-  const fullDateText =
-    selectedDayIndex !== null ? formatDate(selectedDay.dow, selectedDay.day) : (draft.date ?? '');
+  const hourText = String(departure.getHours() % 12 === 0 ? 12 : departure.getHours() % 12).padStart(2, '0');
+  const minuteText = String(departure.getMinutes()).padStart(2, '0');
+  const periodText = departure.getHours() >= 12 ? 'PM' : 'AM';
 
   return (
     <View style={styles.fill}>
@@ -150,19 +151,29 @@ export function PostDatetime() {
         </View>
         <View style={styles.dateCard}>
           <View style={styles.weekRow}>
-            {WEEK_DAYS.map((day, index) => {
-              const selected = index === selectedDayIndex;
+            {week.map((day) => {
+              const selected = isSameDay(day, departure);
               return (
-                <Pressable key={day.day} onPress={() => selectDay(index)} style={styles.dayColumn}>
-                  <Text style={styles.dayLabel}>{day.dow}</Text>
+                <Pressable
+                  key={day.toISOString()}
+                  onPress={() => selectDay(day)}
+                  style={styles.dayColumn}
+                  accessibilityRole="button"
+                  accessibilityState={{ selected }}
+                  accessibilityLabel={formatRideDate(day)}>
+                  <Text style={styles.dayLabel}>
+                    {day.toLocaleDateString('en-AU', { weekday: 'short' })}
+                  </Text>
                   <View style={[styles.dayNumberWrap, selected && styles.dayNumberWrapSelected]}>
-                    <Text style={[styles.dayNumber, selected && styles.dayNumberSelected]}>{day.day}</Text>
+                    <Text style={[styles.dayNumber, selected && styles.dayNumberSelected]}>
+                      {day.getDate()}
+                    </Text>
                   </View>
                 </Pressable>
               );
             })}
           </View>
-          <Text style={styles.fullDate}>{fullDateText}</Text>
+          <Text style={styles.fullDate}>{formatRideDate(departure)}</Text>
         </View>
 
         <View style={[styles.labelRow, styles.sectionGap]}>
@@ -177,20 +188,20 @@ export function PostDatetime() {
             onPress={cycleHour}
             style={[styles.timeBox, focusedField === 'hour' && styles.timeBoxFocused]}>
             <Text style={styles.timeBoxLabel}>Hour</Text>
-            <Text style={styles.timeBoxValue}>{hour}</Text>
+            <Text style={styles.timeBoxValue}>{hourText}</Text>
           </Pressable>
           <Text style={styles.timeSeparator}>:</Text>
           <Pressable
             onPress={cycleMinute}
             style={[styles.timeBox, focusedField === 'minute' && styles.timeBoxFocused]}>
             <Text style={styles.timeBoxLabel}>Minute</Text>
-            <Text style={styles.timeBoxValue}>{minute}</Text>
+            <Text style={styles.timeBoxValue}>{minuteText}</Text>
           </Pressable>
           <Pressable
             onPress={cyclePeriod}
             style={[styles.timeBox, focusedField === 'period' && styles.timeBoxFocused]}>
             <Text style={styles.timeBoxLabel}>Period</Text>
-            <Text style={styles.timeBoxValue}>{period}</Text>
+            <Text style={styles.timeBoxValue}>{periodText}</Text>
           </Pressable>
         </View>
 
@@ -200,7 +211,7 @@ export function PostDatetime() {
             onPress={() => adjustSeats(-1)}
             disabled={seats <= MIN_SEATS}
             style={[styles.seatsButton, seats <= MIN_SEATS && styles.seatsButtonDisabled]}>
-            <Text style={styles.seatsButtonLabel}>−</Text>
+            <Text style={styles.seatsButtonLabel}>-</Text>
           </Pressable>
           <View style={styles.seatIcons}>
             {Array.from({ length: MAX_SEATS }).map((_, index) => (
@@ -220,7 +231,9 @@ export function PostDatetime() {
             <Text style={styles.seatsButtonLabel}>+</Text>
           </Pressable>
         </View>
-        <Text style={styles.seatsCaption}>{seats} passenger{seats === 1 ? '' : 's'}</Text>
+        <Text style={styles.seatsCaption}>
+          {seats} passenger{seats === 1 ? '' : 's'}
+        </Text>
       </View>
 
       <View style={styles.actions}>
@@ -241,6 +254,8 @@ export function PostDatetime() {
               mode="date"
               display="spinner"
               themeVariant="light"
+              // A ride can't depart in the past.
+              minimumDate={new Date()}
               style={styles.spinner}
               onChange={handleSpinnerChange}
             />
@@ -265,10 +280,21 @@ export function PostDatetime() {
       ) : (
         <>
           {datePickerVisible && (
-            <DateTimePicker value={tempDate} mode="date" display="default" onChange={handleAndroidDateChange} />
+            <DateTimePicker
+              value={tempDate}
+              mode="date"
+              display="default"
+              minimumDate={new Date()}
+              onChange={handleAndroidDateChange}
+            />
           )}
           {timePickerVisible && (
-            <DateTimePicker value={tempDate} mode="time" display="default" onChange={handleAndroidTimeChange} />
+            <DateTimePicker
+              value={tempDate}
+              mode="time"
+              display="default"
+              onChange={handleAndroidTimeChange}
+            />
           )}
         </>
       )}
