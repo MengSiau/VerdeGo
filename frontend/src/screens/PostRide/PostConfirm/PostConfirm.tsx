@@ -4,17 +4,17 @@ import { calculateRideEmissionsKg } from '@/src/utils/rideEmissions';
 import { Ionicons } from '@expo/vector-icons';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
+import { useState } from 'react';
 import { Alert, Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ExpandableRouteMap } from '@/src/components/ExpandedRouteMap';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { SecondaryButton } from '@/src/components/SecondaryButton';
-import { CURRENT_USER_ID, CURRENT_USER_NAME } from '@/src/data/currentUser';
 import { useRidesStore } from '@/src/data/RidesStore';
-import type { Ride } from '@/src/data/rides';
 import { useRoute } from '@/src/hooks/UseRoute';
 import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
+import { formatRideDate, formatRideTime } from '@/src/utils/datetime';
 
 import { calculateFinalFarePerPassenger } from '../fareCalculator';
 import { usePostRideDraft } from '../PostRideContext';
@@ -28,42 +28,16 @@ function toStationAbbrev(place: string) {
   return place.replace(/ Station$/, ' Stn');
 }
 
-function to24Hour(hour: string, minute: string, period: 'AM' | 'PM') {
-  let hours = parseInt(hour, 10) % 12;
-  if (period === 'PM') hours += 12;
-  return { hours, minutes: parseInt(minute, 10) };
-}
-
-function addMinutes(hours: number, minutes: number, addMinutesAmount: number) {
-  const totalMinutes = hours * 60 + minutes + addMinutesAmount;
-  const wrapped = ((totalMinutes % (24 * 60)) + 24 * 60) % (24 * 60);
-  return { hours: Math.floor(wrapped / 60), minutes: wrapped % 60 };
-}
-
-function to12HourDisplay(hours: number, minutes: number) {
-  const period = hours >= 12 ? 'PM' : 'AM';
-  const displayHour = hours % 12 === 0 ? 12 : hours % 12;
-  return `${displayHour}:${String(minutes).padStart(2, '0')} ${period}`;
-}
-
-// draft.date is stored as "Wed, Aug 13" (set in PostDatetime) - reformat to the fuller
-// "Wed, 13 Aug 2025" style used on this review screen.
-function toFullDateDisplay(shortDate: string | undefined) {
-  const fallback = 'Wed, 13 Aug 2025';
-  if (!shortDate) return fallback;
-  const [dow, rest] = shortDate.split(', ');
-  const [month, day] = rest?.split(' ') ?? [];
-  if (!dow || !month || !day) return fallback;
-    return `${dow}, ${day} ${month} ${new Date().getFullYear()}`;;
-}
-
 export function PostConfirm() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { draft } = usePostRideDraft();
   const { postRide } = useRidesStore();
 
-  const pickup = toStationAbbrev(draft.pickup ?? 'Glen Waverley Station');
+  const [posting, setPosting] = useState(false);
+
+  const pickupFull = draft.pickup ?? 'Selected location';
+  const pickup = toStationAbbrev(pickupFull);
   const destinationFull = draft.destination ?? 'Monash University Clayton Campus';
   const destinationLabel = toStationAbbrev(destinationFull);
   const fuelType = draft.fuelType ?? 'hybrid';
@@ -99,14 +73,16 @@ export function PostConfirm() {
       ? { grade: getGreenScore(factor) }
       : undefined;
 
-  const hourDisplay = draft.hour ? String(parseInt(draft.hour, 10)) : '8';
-  const timeDisplay = `${hourDisplay}:${draft.minute ?? '15'} ${draft.period ?? 'AM'}`;
+  // One timestamp, set in PostDatetime. Every date and time below is formatted
+  // from it rather than reassembled from separate fields.
+  const departure = draft.departureIso ? new Date(draft.departureIso) : null;
+
   const vehicleDisplay = model
     ? `${model.year} ${model.make} ${model.model} (${vehicle?.license_plate})`
     : 'Select a saved vehicle';
   const fare = calculateFinalFarePerPassenger(fuelType, adjustmentPercent, distanceKm ?? 0);
 
-  const handlePostRide = () => {
+  const handlePostRide = async () => {
     // Coordinates are guarded rather than defaulted - a `?? 0` fallback would
     // post a ride with markers in the Atlantic rather than failing visibly.
     if (
@@ -115,45 +91,48 @@ export function PostConfirm() {
       co2Total === undefined ||
       distanceKm === undefined ||
       !origin ||
-      !destination
+      !destination ||
+      !departure
     ) {
       Alert.alert(
         'Missing ride details',
-        'Pick both locations and a saved vehicle with an emissions factor before posting.'
+        'Pick both locations, a departure time, and a saved vehicle with an emissions factor before posting.'
       );
       return;
     }
 
-    const { hours, minutes } = to24Hour(draft.hour ?? '08', draft.minute ?? '15', draft.period ?? 'AM');
-    const dropoff = addMinutes(hours, minutes, durationMinutes);
+    setPosting(true);
 
-    const newRide: Ride = {
-      id: `posted-${Date.now()}`,
-      driverId: CURRENT_USER_ID,
-      driverName: CURRENT_USER_NAME,
-      rating: 5,
-      ratingCount: 0,
-      pickup: draft.pickup ?? 'Glen Waverley Station',
-      destination: destinationFull,
-      date: draft.date ?? 'Wed, Aug 13',
-      departureTime: timeDisplay,
-      dropoffTimeEstimate: to12HourDisplay(dropoff.hours, dropoff.minutes),
-      distanceKm,
-      vehicleId: vehicle.vehicle_id,
-      seats,
-      durationMinutes,
-      price: fare,
-      co2SavedKg: 0,
-      co2EstimateKg: co2Total,
-      confirmedPassengers: [],
-      pickupLat: origin.latitude,
-      pickupLng: origin.longitude,
-      destinationLat: destination.latitude,
-      destinationLng: destination.longitude,
-    };
+    try {
+      await postRide(
+        {
+          vehicle_id: vehicle.vehicle_id,
+          origin_lat: origin.latitude,
+          origin_lng: origin.longitude,
+          destination_lat: destination.latitude,
+          destination_lng: destination.longitude,
+          origin_label: pickupFull,
+          destination_label: destinationFull,
+          departure_time: departure.toISOString(),
+          price_per_passenger: fare,
+          seats_available: seats,
+          // route_estimates has NOT NULL on all three. The client already has
+          // them from the Routes API and the vehicle's emissions factor.
+          distance_km: distanceKm,
+          duration_min: durationMinutes,
+          co2_estimate_kg: co2Total,
+        },
+        formatRideDate(departure),
+      );
 
-    postRide(newRide, draft.date ?? 'Tomorrow');
-    router.push('/home');
+      router.push('/home');
+    } catch (e) {
+      // The API returns a generic message by design; the detail is in the
+      // Flask console.
+      Alert.alert('Could not post ride', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setPosting(false);
+    }
   };
 
   const handleCancel = () => {
@@ -200,8 +179,8 @@ export function PostConfirm() {
         />
 
         <View style={styles.rows}>
-          <SummaryRow label="Date" value={toFullDateDisplay(draft.date)} />
-          <SummaryRow label="Time" value={timeDisplay} />
+          <SummaryRow label="Date" value={departure ? formatRideDate(departure) : 'Not set'} />
+          <SummaryRow label="Time" value={departure ? formatRideTime(departure) : 'Not set'} />
           <SummaryRow label="Seats" value={`${seats} available`} />
           <SummaryRow
             label="Distance"
@@ -230,8 +209,10 @@ export function PostConfirm() {
 
       <View style={styles.actions}>
         <PrimaryButton
-          label="Post Ride"
-          disabled={loading || co2Total === undefined || distanceKm === undefined}
+          label={posting ? 'Posting…' : 'Post Ride'}
+          disabled={
+            posting || loading || co2Total === undefined || distanceKm === undefined || !departure
+          }
           onPress={handlePostRide}
         />
         <View style={styles.actionGap} />

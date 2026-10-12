@@ -14,9 +14,8 @@ export function FullscreenRoute() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { rides } = useRidesStore();
-
-  const ride = rides.find((r) => r.id === id);
+  const { allRides } = useRidesStore();
+  const ride = allRides.find((r) => r.id === id);
   const origin = ride ? { latitude: ride.pickupLat, longitude: ride.pickupLng } : null;
   const destination = ride
     ? { latitude: ride.destinationLat, longitude: ride.destinationLng }
