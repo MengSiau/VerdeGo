@@ -11,7 +11,6 @@ import { FilterChips } from '@/src/components/FilterChips';
 import { MyRideCard } from '@/src/components/MyRideCard';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { SegmentedTabs } from '@/src/components/SegmentedTabs';
-import { useRidesStore } from '@/src/data/RidesStore';
 import { useMyRides } from '@/src/hooks/useMyRides';
 import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
 
@@ -21,7 +20,6 @@ type RoleFilter = 'all' | 'driving' | 'riding';
 export function MyRides() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { reviews } = useRidesStore();
   const { upcoming, past, loading, error, refresh } = useMyRides();
   const [tab, setTab] = useState<RidesTab>('upcoming');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
@@ -108,16 +106,21 @@ export function MyRides() {
             </View>
           ) : pastRides.length > 0 ? (
             <View style={styles.cardsList}>
-              {pastRides.map(({ ride, role }) => (
-                <MyRideCard
-                  key={ride.id}
-                  ride={ride}
-                  dateLabel={ride.date}
-                  role={role}
-                  onReview={() => router.push(`/post-review/${ride.id}`)}
-                  reviewed={!!reviews[ride.id]}
-                />
-              ))}
+              {pastRides.map(({ ride, role, status, reviewed }) => {
+                // Only a passenger can review, and only once the ride actually
+                // happened - not a cancelled one, and never the driver reviewing themselves.
+                const canReview = role === 'passenger' && status === 'completed';
+                return (
+                  <MyRideCard
+                    key={ride.id}
+                    ride={ride}
+                    dateLabel={ride.date}
+                    role={role}
+                    onReview={canReview ? () => router.push(`/post-review/${ride.id}`) : undefined}
+                    reviewed={canReview ? reviewed : undefined}
+                  />
+                );
+              })}
             </View>
           ) : (
             <View style={styles.emptyState}>

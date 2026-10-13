@@ -3,12 +3,14 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { Avatar } from '@/src/components/Avatar';
+import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { Stars } from '@/src/components/Stars';
-import { DUMMY_RECEIVED_REVIEWS, type ReceivedReview } from '@/src/data/reviews';
+import type { ReceivedReview } from '@/src/data/reviews';
+import { useReceivedReviews } from '@/src/hooks/useReceivedReviews';
 import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
 
 // Messages longer than this start collapsed behind a "Read more" toggle.
@@ -17,14 +19,15 @@ const COLLAPSE_AFTER_CHARS = 140;
 export function Reviews() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { reviews, loading, error, refresh } = useReceivedReviews();
 
   const { average, count } = useMemo(() => {
-    const total = DUMMY_RECEIVED_REVIEWS.reduce((sum, r) => sum + r.rating, 0);
+    const total = reviews.reduce((sum, r) => sum + r.rating, 0);
     return {
-      average: DUMMY_RECEIVED_REVIEWS.length ? total / DUMMY_RECEIVED_REVIEWS.length : 0,
-      count: DUMMY_RECEIVED_REVIEWS.length,
+      average: reviews.length ? total / reviews.length : 0,
+      count: reviews.length,
     };
-  }, []);
+  }, [reviews]);
 
   return (
     <View style={styles.fill}>
@@ -57,14 +60,33 @@ export function Reviews() {
         </View>
       </LinearGradient>
 
-      <ScrollView
-        style={styles.fill}
-        contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
-        showsVerticalScrollIndicator={false}>
-        {DUMMY_RECEIVED_REVIEWS.map((review) => (
-          <ReviewCard key={review.id} review={review} />
-        ))}
-      </ScrollView>
+      {loading && reviews.length === 0 ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color={colors.brand.verde600} />
+        </View>
+      ) : error ? (
+        <View style={styles.centeredState}>
+          <Text style={styles.emptyTitle}>Unable to load reviews</Text>
+          <Text style={styles.emptyText}>{error}</Text>
+          <View style={styles.retryButton}>
+            <PrimaryButton label="Try Again" onPress={() => void refresh()} />
+          </View>
+        </View>
+      ) : reviews.length === 0 ? (
+        <View style={styles.centeredState}>
+          <Ionicons name="star-outline" size={20} color={colors.neutral.gray400} />
+          <Text style={styles.emptyText}>No reviews yet</Text>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.fill}
+          contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 24 }]}
+          showsVerticalScrollIndicator={false}>
+          {reviews.map((review) => (
+            <ReviewCard key={review.id} review={review} />
+          ))}
+        </ScrollView>
+      )}
     </View>
   );
 }
@@ -87,9 +109,11 @@ function ReviewCard({ review }: { review: ReceivedReview }) {
         <Stars rating={review.rating} size={14} />
       </View>
 
-      <Text style={styles.message} numberOfLines={isLong && !expanded ? 3 : undefined}>
-        {review.message}
-      </Text>
+      {review.message.length > 0 && (
+        <Text style={styles.message} numberOfLines={isLong && !expanded ? 3 : undefined}>
+          {review.message}
+        </Text>
+      )}
 
       {isLong && (
         <Pressable
@@ -160,6 +184,29 @@ const styles = StyleSheet.create({
     paddingHorizontal: screenPaddingX.standard,
     paddingTop: 16,
     gap: 12,
+  },
+  centeredState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: screenPaddingX.standard,
+    gap: 8,
+    backgroundColor: colors.neutral.white,
+  },
+  emptyTitle: {
+    fontFamily: fontFamily.headingSemibold,
+    fontSize: fontSize.base,
+    color: colors.neutral.gray800,
+  },
+  emptyText: {
+    fontFamily: fontFamily.bodyRegular,
+    fontSize: fontSize.sm,
+    color: colors.neutral.gray400,
+    textAlign: 'center',
+  },
+  retryButton: {
+    marginTop: 4,
+    alignSelf: 'stretch',
   },
   card: {
     borderRadius: radius['2xl'],

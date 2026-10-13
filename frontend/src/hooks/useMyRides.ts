@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from 'react';
 
-import { getMyRides } from '@/src/api/rides';
+import { getMyRides, type Ride as RideStatusSource } from '@/src/api/rides';
 import { useAuth } from '@/src/auth/AuthProvider';
 import { mapRideWithDetailsToRide } from '@/src/data/browseRides';
 import type { Ride } from '@/src/data/rides';
@@ -8,10 +8,15 @@ import type { Ride } from '@/src/data/rides';
 export type MyRideEntry = {
   ride: Ride;
   role: 'driver' | 'passenger';
+  status: RideStatusSource['ride_status'];
+  // Only meaningful when role is 'passenger'.
+  reviewed?: boolean;
 };
 
 // Fetches every ride the current user is involved in (GET /api/rides/mine, which already
-// tells us the role per ride) and splits it into Upcoming/Past by ride_status. Same
+// tells us the role per ride) and splits it into Upcoming/Past by ride_status. Each entry
+// also carries that raw status and, for passenger-side entries, whether it's already been
+// reviewed - both needed by MyRides to decide when to show "Leave a review". Same
 // loading/error/refresh shape as useBrowseRides/useRideDetails/VehiclesStore.
 export function useMyRides() {
   const { session } = useAuth();
@@ -36,6 +41,7 @@ export function useMyRides() {
           ride: await mapRideWithDetailsToRide(item),
           role: item.role,
           status: item.ride.ride_status,
+          reviewed: item.reviewed,
         }))
       );
       if (!active.current || id !== requestId.current) return;
@@ -43,8 +49,8 @@ export function useMyRides() {
       const upcomingEntries: MyRideEntry[] = [];
       const pastEntries: MyRideEntry[] = [];
 
-      for (const { ride, role, status } of mapped) {
-        const entry: MyRideEntry = { ride, role };
+      for (const { ride, role, status, reviewed } of mapped) {
+        const entry: MyRideEntry = { ride, role, status, reviewed };
         if (status === 'scheduled' || status === 'ongoing') {
           upcomingEntries.push(entry);
         } else {

@@ -1,5 +1,5 @@
 import os
-from datetime import datetime, timezone
+from datetime import datetime, timedelta, timezone
 
 from flask import Blueprint, jsonify, request
 from supabase import create_client
@@ -94,6 +94,61 @@ def _get_confirmed_passengers_by_ride_id(ride_ids):
         })
     return result
 
+
+def _complete_elapsed_rides():
+    """Lazily flips 'scheduled' rides whose estimated arrival has already passed to
+    'completed'. There's no cron/scheduler in this app, so this runs at the top of
+    every endpoint that reads ride_status instead - by the time anyone looks, the
+    status is already correct, with no background job needed.
+
+    Estimated arrival = departure_time + route_estimates.duration_min, when a route
+    estimate exists; a ride with no known duration falls back to departure_time itself,
+    since it can't wait indefinitely to be marked done. Cancelled rides are untouched -
+    this only ever moves 'scheduled' forward, never overrides an explicit cancellation.
+
+    Best-effort: a failure here shouldn't break the request that triggered it, since
+    this is just housekeeping, not the thing the caller actually asked for.
+    """
+    try:
+        now = datetime.now(timezone.utc)
+
+        departed_response = (
+            supabase
+            .table("rides")
+            .select("ride_id, departure_time")
+            .eq("ride_status", "scheduled")
+            .lt("departure_time", now.isoformat())
+            .execute()
+        )
+        departed_rides = departed_response.data
+
+        if not departed_rides:
+            return
+
+        ride_ids = [r["ride_id"] for r in departed_rides]
+        estimates_response = (
+            supabase
+            .table("route_estimates")
+            .select("ride_id, duration_min")
+            .in_("ride_id", ride_ids)
+            .execute()
+        )
+        duration_by_ride_id = {e["ride_id"]: e["duration_min"] for e in estimates_response.data}
+
+        elapsed_ride_ids = []
+        for ride in departed_rides:
+            departure = datetime.fromisoformat(ride["departure_time"])
+            estimated_arrival = departure + timedelta(minutes=duration_by_ride_id.get(ride["ride_id"], 0) or 0)
+            if estimated_arrival < now:
+                elapsed_ride_ids.append(ride["ride_id"])
+
+        if elapsed_ride_ids:
+            supabase.table("rides").update(
+                {"ride_status": "completed"}
+            ).in_("ride_id", elapsed_ride_ids).execute()
+    except Exception:
+        pass
+
 '''
 GET /api/rides
 
@@ -110,6 +165,8 @@ def get_rides():
 
     if not user:
         return jsonify({"error": "Authentication required"}), 401
+
+    _complete_elapsed_rides()
 
     try:
         # Get vehicles owned by the current user
@@ -229,7 +286,9 @@ vehicle they own, excluding ones they've cancelled) or a passenger (ride_passeng
 with status 'accepted' or 'completed' - not 'requested', 'rejected' or 'cancelled', since
 those aren't a real booking). Each entry has the same {ride, driver, estimate} shape as
 the other endpoints, plus "role" ("driver" | "passenger") so the client doesn't have to
-re-derive it, and "passenger_status" on passenger-side entries.
+re-derive it, "passenger_status" on passenger-side entries, and "reviewed" (bool) on
+passenger-side entries - whether this user has already reviewed this ride's driver (see
+POST /api/reviews), so the client knows whether to show "Leave a review" or not.
 
 A cancelled ride (see PATCH /<ride_id>/cancel) drops off both sides automatically: the
 driver query excludes ride_status 'cancelled' directly, and cancelling also flips every
@@ -248,6 +307,8 @@ def get_my_rides():
 
     if not user:
         return jsonify({"error": "Authentication required"}), 401
+
+    _complete_elapsed_rides()
 
     try:
         # Driver side: rides on any vehicle I own.
@@ -351,6 +412,20 @@ def get_my_rides():
 
         confirmed_passengers_by_ride_id = _get_confirmed_passengers_by_ride_id(all_ride_ids)
 
+        # Has the current user (as a passenger) already reviewed this ride's driver?
+        # Only meaningful for passenger-side entries - a driver can't review themselves.
+        reviewed_ride_ids = set()
+        if passenger_ride_ids:
+            my_reviews_response = (
+                supabase
+                .table("reviews")
+                .select("ride_id")
+                .eq("reviewer_id", user.id)
+                .in_("ride_id", passenger_ride_ids)
+                .execute()
+            )
+            reviewed_ride_ids = {r["ride_id"] for r in my_reviews_response.data}
+
         def build_entry(ride, role, passenger_status=None):
             vehicle = vehicles_by_id.get(ride["vehicle_id"], {})
             driver_id = vehicle.get("user_id")
@@ -367,6 +442,8 @@ def get_my_rides():
             entry["role"] = role
             if passenger_status:
                 entry["passenger_status"] = passenger_status
+            if role == "passenger":
+                entry["reviewed"] = ride["ride_id"] in reviewed_ride_ids
             return entry
 
         results = [build_entry(ride, "driver") for ride in driver_rides]
@@ -395,6 +472,8 @@ def get_ride(ride_id):
 
     if not user:
         return jsonify({"error": "Authentication required"}), 401
+
+    _complete_elapsed_rides()
 
     try:
         ride_response = (

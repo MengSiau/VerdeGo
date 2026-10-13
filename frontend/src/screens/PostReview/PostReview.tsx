@@ -2,12 +2,13 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useState } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
+import { ActivityIndicator, Alert, Keyboard, Pressable, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
+import { createReview } from '@/src/api/reviews';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { Stars } from '@/src/components/Stars';
-import { useRidesStore } from '@/src/data/RidesStore';
+import { useRideDetails } from '@/src/hooks/useRideDetails';
 import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
 
 const REVIEW_TAGS = ['Great driver', 'On time', 'Clean car', 'Safe', 'Friendly', 'Smooth ride'];
@@ -21,18 +22,28 @@ export function PostReview() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { rides, reviews, submitReview } = useRidesStore();
-  const ride = rides.find((r) => r.id === id);
-  const existing = id ? reviews[id] : undefined;
+  const { ride, loading, error, refresh } = useRideDetails(id);
 
-  const [rating, setRating] = useState(existing?.rating ?? 0);
-  const [message, setMessage] = useState(existing?.message ?? '');
-  const [selectedTags, setSelectedTags] = useState<string[]>(existing?.tags ?? []);
+  const [rating, setRating] = useState(0);
+  const [message, setMessage] = useState('');
+  const [selectedTags, setSelectedTags] = useState<string[]>([]);
+  const [submitting, setSubmitting] = useState(false);
 
-  if (!ride) {
+  if (loading && !ride) {
     return (
       <View style={styles.notFound}>
-        <Text style={styles.notFoundText}>Ride not found.</Text>
+        <ActivityIndicator size="large" color={colors.brand.verde600} />
+      </View>
+    );
+  }
+
+  if (error || !ride) {
+    return (
+      <View style={styles.notFound}>
+        <Text style={styles.notFoundText}>{error ?? 'Ride not found.'}</Text>
+        <View style={styles.retryButton}>
+          <PrimaryButton label="Try Again" onPress={() => void refresh()} />
+        </View>
       </View>
     );
   }
@@ -43,9 +54,35 @@ export function PostReview() {
     setSelectedTags((prev) => (prev.includes(tag) ? prev.filter((t) => t !== tag) : [...prev, tag]));
   };
 
-  const handleSubmit = () => {
-    submitReview({ rideId: ride.id, rating, message: message.trim(), tags: selectedTags });
-    router.back();
+  // Multiline TextInputs don't fire onSubmitEditing for the return key - it just inserts
+  // a newline instead. Treat that newline as "done": drop it and dismiss the keyboard.
+  const handleMessageChange = (text: string) => {
+    if (text.endsWith('\n')) {
+      setMessage(text.slice(0, -1));
+      Keyboard.dismiss();
+      return;
+    }
+    setMessage(text);
+  };
+
+  const handleSubmit = async () => {
+    if (!id) return;
+    // There's no tags column on reviews - fold the quick tags into the free text
+    // rather than silently dropping what the user picked.
+    const trimmedMessage = message.trim();
+    const reviewText = selectedTags.length
+      ? `${selectedTags.join(', ')}${trimmedMessage ? `\n\n${trimmedMessage}` : ''}`
+      : trimmedMessage;
+
+    setSubmitting(true);
+    try {
+      await createReview({ ride_id: id, rating, review_text: reviewText || undefined });
+      router.back();
+    } catch (e) {
+      Alert.alert('Unable to submit review', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setSubmitting(false);
+    }
   };
 
   return (
@@ -75,10 +112,12 @@ export function PostReview() {
           placeholder="Share your experience..."
           placeholderTextColor={colors.neutral.gray400}
           value={message}
-          onChangeText={setMessage}
+          onChangeText={handleMessageChange}
           multiline
           maxLength={500}
           textAlignVertical="top"
+          returnKeyType="done"
+          blurOnSubmit
         />
 
         <Text style={[styles.label, styles.sectionGap]}>Quick tags</Text>
@@ -100,7 +139,11 @@ export function PostReview() {
       </ScrollView>
 
       <View style={[styles.footer, { paddingBottom: insets.bottom + 16 }]}>
-        <PrimaryButton label="Submit Review" onPress={handleSubmit} disabled={rating === 0} />
+        <PrimaryButton
+          label={submitting ? 'Submitting...' : 'Submit Review'}
+          onPress={handleSubmit}
+          disabled={rating === 0 || submitting}
+        />
       </View>
     </View>
   );
@@ -115,11 +158,17 @@ const styles = StyleSheet.create({
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 12,
   },
   notFoundText: {
     fontFamily: fontFamily.bodyRegular,
     fontSize: fontSize.sm,
     color: colors.neutral.gray500,
+    textAlign: 'center',
+  },
+  retryButton: {
+    alignSelf: 'stretch',
   },
   hero: {
     alignItems: 'center',
@@ -158,6 +207,7 @@ const styles = StyleSheet.create({
   },
   starsWrap: {
     alignItems: 'center',
+    marginBottom: 28,
   },
   label: {
     marginBottom: 8,

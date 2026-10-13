@@ -45,8 +45,9 @@ export interface RideWithDetails {
 
 export interface MyRideWithDetails extends RideWithDetails {
     role: 'driver' | 'passenger';
-    // Only present when role is 'passenger'.
+    // Both only present when role is 'passenger'.
     passenger_status?: 'requested' | 'accepted' | 'rejected' | 'cancelled' | 'completed';
+    reviewed?: boolean;
 }
 
 export interface CreateRideRequest {
