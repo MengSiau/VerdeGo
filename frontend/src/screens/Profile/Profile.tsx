@@ -19,6 +19,7 @@ import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { SecondaryButton } from "@/src/components/SecondaryButton";
 import { SegmentedOptions } from "@/src/components/SegmentedOptions";
 import { TextField } from "@/src/components/TextField";
+import { useAuth } from "@/src/auth/AuthProvider";
 import { useUserDetailStore } from "@/src/data/UserDetailStore";
 import { useCurrentUser } from "@/src/hooks/useCurrentUser";
 import {
@@ -42,6 +43,7 @@ export function Profile() {
     updateProfile,
   } = useUserDetailStore();
   const { user: currentUser } = useCurrentUser();
+  const { signOut } = useAuth();
 
   // The real sign-up name lives on the backend (dev.users.name) - fall back to "Your Name"
   // while it's loading or if the fetch fails.
@@ -72,7 +74,9 @@ export function Profile() {
   };
 
   const handleSignOut = () => {
-    router.replace("/");
+    // No manual navigation needed - RootNavigator's own effect redirects to
+    // /login-signin as soon as the session clears.
+    void signOut();
   };
   return (
     <View style={styles.fill}>
