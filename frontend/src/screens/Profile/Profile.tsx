@@ -38,6 +38,7 @@ export function Profile() {
     togglePushNotifications,
     setTextSize,
     toggleHighContrastMode,
+    setThemeMode,
     updateProfile,
   } = useUserDetailStore();
 
@@ -187,6 +188,15 @@ export function Profile() {
                 onChange={setTextSize}
               />
             </View>
+            
+            <View style={styles.divider} />
+            <View style={styles.switchRow}> 
+              <View style={styles.switchIconWrap}> <Ionicons name={profile.themeMode === "dark" ? "moon" : "moon-outline"} size={20} color={colors.accent.amber500} /> </View>
+              <Text style={styles.switchLabel}>Night Mode</Text>
+              <Switch value={profile.themeMode === "dark"} onValueChange={(enabled) => setThemeMode(enabled ? "dark" : "light") } trackColor={{ false: colors.neutral.gray200, true: colors.brand.verde500, }} thumbColor={colors.neutral.white} ios_backgroundColor={colors.neutral.gray200} /> 
+
+              </View>
+
 
             <View style={styles.divider} />
 

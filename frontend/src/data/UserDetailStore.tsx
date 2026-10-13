@@ -13,6 +13,7 @@ import {
 import {
   DEFAULT_USER_PROFILE,
   type TextSizePreference,
+  type ThemeMode,
   type UserProfile,
 } from "./currentUser";
 
@@ -22,6 +23,7 @@ type UserDetailStoreValue = {
   togglePushNotifications: () => void;
   setTextSize: (size: TextSizePreference) => void;
   toggleHighContrastMode: () => void;
+  setThemeMode: (m: ThemeMode) => void;
 };
 
 // use to share data across components - share of the type UserStoreValue
@@ -40,6 +42,7 @@ export function UserDetailStoreProvider({ children }: { children: ReactNode }) {
       //changing general profile fields
       updateProfile: (fields) => setProfile((prev) => ({ ...prev, ...fields })),
       // notifs on and off
+      setThemeMode: (m) => setProfile((p) => ({...p, themeMode: m,})),
       togglePushNotifications: () =>
         setProfile((prev) => ({
           ...prev,
