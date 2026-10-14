@@ -11,11 +11,13 @@ type CancelRideModalProps = {
   ride: Ride;
   onKeep: () => void;
   onConfirmCancel: () => void;
+  /** True while the cancellation request is in flight - disables both buttons. */
+  confirming?: boolean;
 };
 
 // Confirmation bottom sheet shown from MyRideDetails - design-system.json's
 // "bottomSheetModal" component, documented usage: "CancelModalScreen confirmation sheet".
-export function CancelRideModal({ visible, ride, onKeep, onConfirmCancel }: CancelRideModalProps) {
+export function CancelRideModal({ visible, ride, onKeep, onConfirmCancel, confirming = false }: CancelRideModalProps) {
   const insets = useSafeAreaInsets();
   const shortPickup = ride.pickup.replace(/ Station$/, '');
   const driverFirstName = ride.driverName.split(' ')[0];
@@ -36,9 +38,14 @@ export function CancelRideModal({ visible, ride, onKeep, onConfirmCancel }: Canc
           </Text>
 
           <View style={styles.actions}>
-            <SecondaryButton variant="destructive" label="Yes, Cancel Ride" onPress={onConfirmCancel} />
+            <SecondaryButton
+              variant="destructive"
+              label={confirming ? 'Cancelling...' : 'Yes, Cancel Ride'}
+              disabled={confirming}
+              onPress={onConfirmCancel}
+            />
             <View style={styles.actionGap} />
-            <PrimaryButton label="Keep My Ride" onPress={onKeep} />
+            <PrimaryButton label="Keep My Ride" disabled={confirming} onPress={onKeep} />
           </View>
         </View>
       </View>

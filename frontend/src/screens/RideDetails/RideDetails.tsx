@@ -1,21 +1,47 @@
 import { useLocalSearchParams, useRouter } from 'expo-router';
-import { StyleSheet, Text, View } from 'react-native';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
+import { requestToJoinRide } from '@/src/api/rides';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { RideOverview } from '@/src/components/RideOverview';
-import { useRidesStore } from '@/src/data/RidesStore';
+import { useRideDetails } from '@/src/hooks/useRideDetails';
 import { colors, fontFamily, fontSize } from '@/src/theme';
 
 export function RideDetails() {
   const router = useRouter();
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { rides } = useRidesStore();
-  const ride = rides.find((r) => r.id === id);
+  const { ride, loading, error, refresh } = useRideDetails(id);
+  const [requesting, setRequesting] = useState(false);
 
-  if (!ride) {
+  const handleRequestToJoin = async () => {
+    if (!id) return;
+    setRequesting(true);
+    try {
+      await requestToJoinRide(id);
+      router.push(`/ride-request-sent/${id}`);
+    } catch (e) {
+      Alert.alert('Unable to send request', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  if (loading && !ride) {
     return (
-      <View style={styles.notFound}>
-        <Text style={styles.notFoundText}>Ride not found.</Text>
+      <View style={styles.centeredState}>
+        <ActivityIndicator size="large" color={colors.brand.verde600} />
+      </View>
+    );
+  }
+
+  if (error || !ride) {
+    return (
+      <View style={styles.centeredState}>
+        <Text style={styles.notFoundText}>{error ?? 'Ride not found.'}</Text>
+        <View style={styles.retryButton}>
+          <PrimaryButton label="Try Again" onPress={() => void refresh()} />
+        </View>
       </View>
     );
   }
@@ -24,22 +50,31 @@ export function RideDetails() {
     <RideOverview
       ride={ride}
       actions={
-        // TODO: submit the actual join request to backend once it exists.
-        <PrimaryButton label="Request to Join" onPress={() => router.push(`/ride-request-sent/${ride.id}`)} />
+        <PrimaryButton
+          label={requesting ? 'Sending Request...' : 'Request to Join'}
+          disabled={requesting}
+          onPress={handleRequestToJoin}
+        />
       }
     />
   );
 }
 
 const styles = StyleSheet.create({
-  notFound: {
+  centeredState: {
     flex: 1,
     alignItems: 'center',
     justifyContent: 'center',
+    paddingHorizontal: 24,
+    gap: 12,
   },
   notFoundText: {
     fontFamily: fontFamily.bodyRegular,
     fontSize: fontSize.sm,
     color: colors.neutral.gray500,
+    textAlign: 'center',
+  },
+  retryButton: {
+    alignSelf: 'stretch',
   },
 });

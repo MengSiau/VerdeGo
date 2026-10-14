@@ -8,6 +8,7 @@ import { Avatar } from './Avatar';
 import { Stars } from './Stars';
 
 import { calculateCo2SavedKg } from '@/src/utils/co2savings';
+import { formatJoinedPassengers } from '@/src/utils/formatPassengers';
 
 type RideCardProps = {
   ride: Ride;
@@ -59,6 +60,15 @@ export function RideCard({ ride, onPress }: RideCardProps) {
         </View>
         <Text style={styles.co2Text}>{calculateCo2SavedKg(ride.distanceKm,1).toFixed(1)}kg by joining</Text>
       </View>
+
+      {ride.confirmedPassengers.length > 0 && (
+        <View style={styles.passengersRow}>
+          <Ionicons name="people-outline" size={14} color={colors.neutral.gray500} />
+          <Text style={styles.passengersText}>
+            {formatJoinedPassengers(ride.confirmedPassengers.map((p) => p.name))} joined
+          </Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -154,5 +164,16 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.headingSemibold,
     fontSize: fontSize.xs,
     color: colors.brand.verde600,
+  },
+  passengersRow: {
+    marginTop: 8,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  passengersText: {
+    fontFamily: fontFamily.bodyRegular,
+    fontSize: fontSize.xs,
+    color: colors.neutral.gray500,
   },
 });

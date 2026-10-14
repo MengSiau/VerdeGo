@@ -3,16 +3,15 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import { ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { BottomNav } from '@/src/components/BottomNav';
 import { FilterChips } from '@/src/components/FilterChips';
 import { MyRideCard } from '@/src/components/MyRideCard';
+import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { SegmentedTabs } from '@/src/components/SegmentedTabs';
-import { CURRENT_USER_ID } from '@/src/data/currentUser';
-import { useRidesStore } from '@/src/data/RidesStore';
-import type { MyRideBooking, Ride } from '@/src/data/rides';
+import { useMyRides } from '@/src/hooks/useMyRides';
 import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
 
 type RidesTab = 'upcoming' | 'past';
@@ -21,26 +20,19 @@ type RoleFilter = 'all' | 'driving' | 'riding';
 export function MyRides() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { rides, myBookings } = useRidesStore();
+  const { upcoming, past, loading, error, refresh } = useMyRides();
   const [tab, setTab] = useState<RidesTab>('upcoming');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
 
   const upcomingRides = useMemo(() => {
-    const entries: { booking: MyRideBooking; ride: Ride; role: 'driver' | 'passenger' }[] = [];
-    for (const booking of myBookings) {
-      const ride = rides.find((r) => r.id === booking.rideId);
-      if (ride) entries.push({ booking, ride, role: ride.driverId === CURRENT_USER_ID ? 'driver' : 'passenger' });
-    }
-
-    const filtered = entries.filter((entry) => {
+    return upcoming.filter((entry) => {
       if (roleFilter === 'driving') return entry.role === 'driver';
       if (roleFilter === 'riding') return entry.role === 'passenger';
       return true;
     });
+  }, [upcoming, roleFilter]);
 
-    // Rides you're driving surface first - it's your own posting, not just something you joined.
-    return filtered.sort((a, b) => (a.role === b.role ? 0 : a.role === 'driver' ? -1 : 1));
-  }, [rides, myBookings, roleFilter]);
+  const pastRides = past;
 
   return (
     <View style={styles.fill}>
@@ -60,28 +52,47 @@ export function MyRides() {
         </View>
       </LinearGradient>
 
-      <ScrollView
-        style={styles.fill}
-        contentContainerStyle={styles.listContent}
-        showsVerticalScrollIndicator={false}>
-        {tab === 'upcoming' ? (
-          <>
-            <FilterChips
-              options={[
-                { label: 'All', value: 'all', icon: <Ionicons name="apps-outline" size={14} color={roleFilter === 'all' ? colors.neutral.white : colors.neutral.gray600} /> },
-                { label: 'Driving', value: 'driving', icon: <Ionicons name="car-sport-outline" size={14} color={roleFilter === 'driving' ? colors.neutral.white : colors.neutral.gray600} /> },
-                { label: 'Riding', value: 'riding', icon: <Ionicons name="person-outline" size={14} color={roleFilter === 'riding' ? colors.neutral.white : colors.neutral.gray600} /> },
-              ]}
-              value={roleFilter}
-              onChange={setRoleFilter}
-            />
+      {tab === 'upcoming' && (
+        <View style={styles.filterSection}>
+          <FilterChips
+            options={[
+              { label: 'All', value: 'all', icon: <Ionicons name="apps-outline" size={14} color={roleFilter === 'all' ? colors.neutral.white : colors.neutral.gray600} /> },
+              { label: 'Driving', value: 'driving', icon: <Ionicons name="car-sport-outline" size={14} color={roleFilter === 'driving' ? colors.neutral.white : colors.neutral.gray600} /> },
+              { label: 'Riding', value: 'riding', icon: <Ionicons name="person-outline" size={14} color={roleFilter === 'riding' ? colors.neutral.white : colors.neutral.gray600} /> },
+            ]}
+            value={roleFilter}
+            onChange={setRoleFilter}
+          />
+        </View>
+      )}
 
+      {loading && upcoming.length === 0 && past.length === 0 ? (
+        <View style={styles.centeredState}>
+          <ActivityIndicator size="large" color={colors.brand.verde600} />
+        </View>
+      ) : error ? (
+        <View style={styles.centeredState}>
+          <Text style={styles.errorTitle}>Unable to load your rides</Text>
+          <Text style={styles.errorSubtitle}>{error}</Text>
+          <View style={styles.errorButton}>
+            <PrimaryButton label="Try Again" onPress={() => void refresh()} />
+          </View>
+        </View>
+      ) : (
+        <ScrollView
+          style={styles.fill}
+          contentContainerStyle={styles.listContent}
+          showsVerticalScrollIndicator={false}
+          refreshControl={
+            <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={colors.brand.verde600} />
+          }>
+          {tab === 'upcoming' ? (
             <View style={styles.cardsList}>
-              {upcomingRides.map(({ booking, ride, role }) => (
+              {upcomingRides.map(({ ride, role }) => (
                 <MyRideCard
                   key={ride.id}
                   ride={ride}
-                  dateLabel={booking.dateLabel}
+                  dateLabel={ride.date}
                   role={role}
                   onPress={() => router.push(`/my-ride-details/${ride.id}`)}
                 />
@@ -93,14 +104,32 @@ export function MyRides() {
                 </Text>
               </View>
             </View>
-          </>
-        ) : (
-          <View style={styles.emptyState}>
-            <Ionicons name="time-outline" size={20} color={colors.neutral.gray400} />
-            <Text style={styles.endOfListText}>No past rides yet</Text>
-          </View>
-        )}
-      </ScrollView>
+          ) : pastRides.length > 0 ? (
+            <View style={styles.cardsList}>
+              {pastRides.map(({ ride, role, status, reviewed }) => {
+                // Only a passenger can review, and only once the ride actually
+                // happened - not a cancelled one, and never the driver reviewing themselves.
+                const canReview = role === 'passenger' && status === 'completed';
+                return (
+                  <MyRideCard
+                    key={ride.id}
+                    ride={ride}
+                    dateLabel={ride.date}
+                    role={role}
+                    onReview={canReview ? () => router.push(`/post-review/${ride.id}`) : undefined}
+                    reviewed={canReview ? reviewed : undefined}
+                  />
+                );
+              })}
+            </View>
+          ) : (
+            <View style={styles.emptyState}>
+              <Ionicons name="time-outline" size={20} color={colors.neutral.gray400} />
+              <Text style={styles.endOfListText}>No past rides yet</Text>
+            </View>
+          )}
+        </ScrollView>
+      )}
 
       <BottomNav active="myRides" />
     </View>
@@ -123,6 +152,11 @@ const styles = StyleSheet.create({
   tabsWrap: {
     marginTop: 16,
   },
+  filterSection: {
+    backgroundColor: colors.neutral.white,
+    paddingHorizontal: screenPaddingX.standard,
+    paddingTop: 16,
+  },
   listContent: {
     flexGrow: 1,
     backgroundColor: colors.neutral.white,
@@ -131,7 +165,6 @@ const styles = StyleSheet.create({
     paddingBottom: 20,
   },
   cardsList: {
-    marginTop: 16,
     gap: 12,
   },
   endOfList: {
@@ -153,5 +186,28 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.bodyRegular,
     fontSize: fontSize.sm,
     color: colors.neutral.gray400,
+  },
+  centeredState: {
+    flex: 1,
+    alignItems: 'center',
+    justifyContent: 'center',
+    paddingHorizontal: screenPaddingX.standard,
+    gap: 8,
+    backgroundColor: colors.neutral.white,
+  },
+  errorTitle: {
+    fontFamily: fontFamily.headingSemibold,
+    fontSize: fontSize.base,
+    color: colors.neutral.gray800,
+  },
+  errorSubtitle: {
+    fontFamily: fontFamily.bodyRegular,
+    fontSize: fontSize.sm,
+    color: colors.neutral.gray500,
+    textAlign: 'center',
+  },
+  errorButton: {
+    marginTop: 12,
+    alignSelf: 'stretch',
   },
 });

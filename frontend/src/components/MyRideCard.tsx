@@ -3,6 +3,7 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 
 import type { Ride } from '@/src/data/rides';
 import { colors, fontFamily, fontSize, mapBg, radius } from '@/src/theme';
+import { formatJoinedPassengers } from '@/src/utils/formatPassengers';
 
 import { Avatar } from './Avatar';
 
@@ -11,10 +12,13 @@ type MyRideCardProps = {
   dateLabel: string;
   role: 'driver' | 'passenger';
   onPress?: () => void;
+  /** Past rides pass this to show a review action in place of "Tap to expand". */
+  onReview?: () => void;
+  reviewed?: boolean;
 };
 
 // TODO: swap the route preview strip for a real map once map integration exists.
-export function MyRideCard({ ride, dateLabel, role, onPress }: MyRideCardProps) {
+export function MyRideCard({ ride, dateLabel, role, onPress, onReview, reviewed }: MyRideCardProps) {
   return (
     <Pressable onPress={onPress} style={styles.card}>
       <View style={styles.routePreview}>
@@ -40,7 +44,9 @@ export function MyRideCard({ ride, dateLabel, role, onPress }: MyRideCardProps) 
             <Text style={styles.driverName}>{ride.driverName}</Text>
             <Text style={styles.driverMeta}>
               {role === 'driver' ? (
-                `${ride.seats - ride.confirmedPassengers.length} seat${ride.seats - ride.confirmedPassengers.length === 1 ? '' : 's'} left`
+                // ride.seats is already "seats still open" - the backend decrements it
+                // as bookings get accepted, so it's not the vehicle's total capacity.
+                `${ride.seats} seat${ride.seats === 1 ? '' : 's'} left`
               ) : (
                 <>
                   Driver · {ride.rating.toFixed(1)} <Text style={styles.star}>★</Text>
@@ -61,6 +67,15 @@ export function MyRideCard({ ride, dateLabel, role, onPress }: MyRideCardProps) 
           </Text>
         </View>
 
+        {ride.confirmedPassengers.length > 0 && (
+          <View style={styles.passengersRow}>
+            <Ionicons name="people-outline" size={14} color={colors.neutral.gray500} />
+            <Text style={styles.passengersText}>
+              {formatJoinedPassengers(ride.confirmedPassengers.map((p) => p.name))} onboard
+            </Text>
+          </View>
+        )}
+
         <View style={styles.footerRow}>
           <View style={styles.co2Row}>
             <View style={styles.co2Icon}>
@@ -68,7 +83,20 @@ export function MyRideCard({ ride, dateLabel, role, onPress }: MyRideCardProps) 
             </View>
             <Text style={styles.co2Text}>{ride.co2EstimateKg.toFixed(2)} kg CO2</Text>
           </View>
-          <Text style={styles.expandText}>Tap to expand ›</Text>
+          {onReview ? (
+            reviewed ? (
+              <View style={styles.reviewedPill}>
+                <Ionicons name="checkmark-circle" size={14} color={colors.brand.verde700} />
+                <Text style={styles.reviewedText}>Reviewed</Text>
+              </View>
+            ) : (
+              <Pressable onPress={onReview} style={styles.reviewButton} accessibilityRole="button">
+                <Text style={styles.reviewButtonText}>Leave a review</Text>
+              </Pressable>
+            )
+          ) : (
+            <Text style={styles.expandText}>Tap to expand ›</Text>
+          )}
         </View>
       </View>
     </Pressable>
@@ -186,6 +214,17 @@ const styles = StyleSheet.create({
     fontSize: fontSize.sm,
     color: colors.neutral.gray700,
   },
+  passengersRow: {
+    marginTop: 10,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 6,
+  },
+  passengersText: {
+    fontFamily: fontFamily.bodyRegular,
+    fontSize: fontSize.xs,
+    color: colors.neutral.gray500,
+  },
   footerRow: {
     marginTop: 12,
     flexDirection: 'row',
@@ -209,6 +248,27 @@ const styles = StyleSheet.create({
     fontFamily: fontFamily.headingSemibold,
     fontSize: fontSize.xs,
     color: colors.brand.verde600,
+  },
+  reviewButton: {
+    paddingHorizontal: 12,
+    paddingVertical: 6,
+    borderRadius: radius.full,
+    backgroundColor: colors.brand.verde500,
+  },
+  reviewButtonText: {
+    fontFamily: fontFamily.headingSemibold,
+    fontSize: fontSize.xs,
+    color: colors.neutral.white,
+  },
+  reviewedPill: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  reviewedText: {
+    fontFamily: fontFamily.headingSemibold,
+    fontSize: fontSize.xs,
+    color: colors.brand.verde700,
   },
   expandText: {
     fontFamily: fontFamily.headingSemibold,

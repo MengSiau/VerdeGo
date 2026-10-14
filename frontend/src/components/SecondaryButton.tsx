@@ -14,6 +14,7 @@ type SecondaryButtonProps = {
    * 'accent' = green-outline action - e.g. Calculate Green Score.
    */
   variant?: SecondaryButtonVariant;
+  disabled?: boolean;
 };
 
 const VARIANT_STYLES: Record<SecondaryButtonVariant, { border: object; label: object }> = {
@@ -23,13 +24,19 @@ const VARIANT_STYLES: Record<SecondaryButtonVariant, { border: object; label: ob
 };
 
 // Standard app-wide secondary/outline button: white bg, border-2, on a white/light screen.
-export function SecondaryButton({ label, icon, onPress, variant = 'default' }: SecondaryButtonProps) {
+export function SecondaryButton({ label, icon, onPress, variant = 'default', disabled = false }: SecondaryButtonProps) {
   const palette = VARIANT_STYLES[variant];
 
   return (
     <Pressable
       onPress={onPress}
-      style={({ pressed }) => [styles.button, palette.border, pressed && styles.pressed]}>
+      disabled={disabled}
+      style={({ pressed }) => [
+        styles.button,
+        palette.border,
+        pressed && !disabled && styles.pressed,
+        disabled && styles.disabled,
+      ]}>
       <View style={styles.content}>
         {icon}
         <Text style={[styles.label, palette.label]}>{label}</Text>
@@ -49,6 +56,9 @@ const styles = StyleSheet.create({
   },
   pressed: {
     opacity: 0.7,
+  },
+  disabled: {
+    opacity: 0.5,
   },
   content: {
     flexDirection: 'row',
