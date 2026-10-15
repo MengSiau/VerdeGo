@@ -7,11 +7,11 @@ import {
   Pressable,
   ScrollView,
   StyleSheet,
-  Switch,
   Text,
   View,
 } from "react-native";
 import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { useRouter } from "expo-router";
 
 import { AccountRow } from "@/src/components/AccountRow";
 import { BottomNav } from "@/src/components/BottomNav";
@@ -19,20 +19,16 @@ import { PrimaryButton } from "@/src/components/PrimaryButton";
 import { SecondaryButton } from "@/src/components/SecondaryButton";
 import { SegmentedOptions } from "@/src/components/SegmentedOptions";
 import { TextField } from "@/src/components/TextField";
+import { ThemedSwitch } from "@/src/components/ThemedSwitch";
 import { useUserDetailStore } from "@/src/data/UserDetailStore";
-import {
-  colors,
-  fontFamily,
-  fontSize,
-  gradients,
-  radius,
-  screenPaddingX,
-} from "@/src/theme";
-import { useRouter } from "expo-router";
+import { colors, fontFamily, radius, screenPaddingX } from "@/src/theme";
+import type { Theme } from "@/src/theme/useTheme";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 export function Profile() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { styles, theme } = useThemedStyles(makeStyles);
   const {
     profile,
     togglePushNotifications,
@@ -42,7 +38,7 @@ export function Profile() {
     updateProfile,
   } = useUserDetailStore();
 
-  //default to 'your name' if strings are empty
+  // default to 'your name' if strings are empty
   const fullName =
     `${profile.firstName} ${profile.lastName}`.trim() || "Your Name";
 
@@ -71,28 +67,27 @@ export function Profile() {
   const handleSignOut = () => {
     router.replace("/");
   };
+
   return (
     <View style={styles.fill}>
       <StatusBar style="light" />
 
       <LinearGradient
-        colors={gradients.headerHero}
+        colors={[...theme.colors.headerGradient]}
         style={[styles.header, { paddingTop: insets.top + 16 }]}
       >
         <View style={styles.identityRow}>
-          <View style={styles.avatarWrap}>
+          <View
+            style={styles.avatarWrap}
+            accessible
+            accessibilityLabel={`Profile picture for ${fullName}`}
+          >
             <View style={styles.avatarCircle}>
               <Text style={styles.avatarInitials}>{initials}</Text>
             </View>
-            {
-              <View style={styles.avatarStatusDot}>
-                <Ionicons
-                  name="checkmark"
-                  size={11}
-                  color={colors.neutral.white}
-                />
-              </View>
-            }
+            <View style={styles.avatarStatusDot}>
+              <Ionicons name="checkmark" size={11} color={theme.colors.onBrand} />
+            </View>
           </View>
 
           <View style={styles.identityText}>
@@ -111,7 +106,7 @@ export function Profile() {
               <Ionicons
                 name="checkmark-circle"
                 size={14}
-                color={colors.neutral.white}
+                color={theme.colors.onHeader}
               />
             </View>
 
@@ -142,7 +137,11 @@ export function Profile() {
               onPress={openEditName}
             />
             <Divider />
-            <AccountRow icon="car-outline" label="Vehicle Details" onPress= { () => router.push("/my-vehicles")} />
+            <AccountRow
+              icon="car-outline"
+              label="Vehicle Details"
+              onPress={() => router.push("/my-vehicles")}
+            />
             <Divider />
             <AccountRow icon="card-outline" label="Payment Method" />
             <Divider />
@@ -157,25 +156,20 @@ export function Profile() {
                 <Ionicons
                   name="notifications-outline"
                   size={20}
-                  color={colors.accent.amber500}
+                  color={theme.colors.brand}
                 />
               </View>
               <Text style={styles.switchLabel}>Push Notifications</Text>
-              <Switch
+              <ThemedSwitch
+                label="Push notifications"
                 value={profile.notificationEnabled}
                 onValueChange={togglePushNotifications}
-                trackColor={{
-                  false: colors.neutral.gray200,
-                  true: colors.brand.verde500,
-                }}
-                thumbColor={colors.neutral.white}
-                ios_backgroundColor={colors.neutral.gray200}
               />
             </View>
           </Card>
         </Section>
 
-        <Section title="Accessibility" badge="WCAG 2.2 AA">
+        <Section title="Accessibility">
           <Card>
             <Text style={styles.fieldLabel}>Text Size</Text>
             <View style={styles.fieldSpacing}>
@@ -188,40 +182,47 @@ export function Profile() {
                 onChange={setTextSize}
               />
             </View>
-            
-            <View style={styles.divider} />
-            <View style={styles.switchRow}> 
-              <View style={styles.switchIconWrap}> <Ionicons name={profile.themeMode === "dark" ? "moon" : "moon-outline"} size={20} color={colors.accent.amber500} /> </View>
-              <Text style={styles.switchLabel}>Night Mode</Text>
-              <Switch value={profile.themeMode === "dark"} onValueChange={(enabled) => setThemeMode(enabled ? "dark" : "light") } trackColor={{ false: colors.neutral.gray200, true: colors.brand.verde500, }} thumbColor={colors.neutral.white} ios_backgroundColor={colors.neutral.gray200} /> 
 
-              </View>
-
-
-            <View style={styles.divider} />
-
+            <Divider />
             <View style={styles.switchRow}>
-              <Text style={styles.switchLabel}>High Contrast Mode</Text>
-              <Switch
-                value={profile.contrast}
-                onValueChange={toggleHighContrastMode}
-                trackColor={{
-                  false: colors.neutral.gray200,
-                  true: colors.brand.verde500,
-                }}
-                thumbColor={colors.neutral.white}
-                ios_backgroundColor={colors.neutral.gray200}
+              <View style={styles.switchIconWrap}>
+                <Ionicons
+                  name={profile.themeMode === "dark" ? "moon" : "moon-outline"}
+                  size={20}
+                  color={theme.colors.brand}
+                />
+              </View>
+              <Text style={styles.switchLabel}>Night Mode</Text>
+              <ThemedSwitch
+                label="Night mode"
+                value={profile.themeMode === "dark"}
+                onValueChange={(on) => setThemeMode(on ? "dark" : "light")}
               />
             </View>
 
-            <Text style={styles.footnote}>
-              All tap targets are ≥44×44px · Minimum 4.5:1 text
-            </Text>
+            <Divider />
+            <View style={styles.switchRow}>
+              <View style={styles.switchIconWrap}>
+                <Ionicons
+                  name="contrast-outline"
+                  size={20}
+                  color={theme.colors.brand}
+                />
+              </View>
+              <Text style={styles.switchLabel}>High Contrast Mode</Text>
+              <ThemedSwitch
+                label="High contrast mode"
+                value={profile.contrast}
+                onValueChange={toggleHighContrastMode}
+              />
+            </View>
           </Card>
         </Section>
 
         <Pressable
           onPress={handleSignOut}
+          accessibilityRole="button"
+          accessibilityLabel="Sign out"
           style={({ pressed }) => [
             styles.signOutButton,
             pressed && styles.signOutButtonPressed,
@@ -232,13 +233,14 @@ export function Profile() {
       </ScrollView>
 
       <BottomNav active="profile" />
+
       <Modal
         visible={isEditingName}
         transparent
         animationType="fade"
         onRequestClose={() => setIsEditingName(false)}
       >
-        <View style={styles.modalBackdrop}>
+        <View style={styles.modalBackdrop} accessibilityViewIsModal>
           <View style={styles.modalCard}>
             <Text style={styles.modalTitle}>Preferred Name</Text>
             <Text style={styles.modalSubtitle}>
@@ -273,6 +275,7 @@ function Section({
   badge?: string;
   children: React.ReactNode;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View style={styles.section}>
       <View style={styles.sectionHeaderRow}>
@@ -289,228 +292,234 @@ function Section({
 }
 
 function Card({ children }: { children: React.ReactNode }) {
+  const { styles } = useThemedStyles(makeStyles);
   return <View style={styles.card}>{children}</View>;
 }
 
 function Divider() {
+  const { styles } = useThemedStyles(makeStyles);
   return <View style={styles.divider} />;
 }
 
-const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: screenPaddingX.standard,
-    paddingBottom: 24,
-  },
-  identityRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 14,
-  },
-  avatarWrap: {
-    width: 68,
-    height: 68,
-  },
-  avatarCircle: {
-    width: 68,
-    height: 68,
-    borderRadius: radius.full,
-    backgroundColor: colors.neutral.white,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  avatarInitials: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize["2xl"],
-    color: colors.brand.verde700,
-  },
-  avatarStatusDot: {
-    position: "absolute",
-    right: 0,
-    bottom: 0,
-    width: 20,
-    height: 20,
-    borderRadius: radius.full,
-    backgroundColor: colors.brand.verde500,
-    alignItems: "center",
-    justifyContent: "center",
-    borderWidth: 2,
-    borderColor: colors.brand.verde700,
-  },
-  identityText: {
-    flex: 1,
-    gap: 4,
-  },
-  name: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.xl,
-    color: colors.neutral.white,
-  },
-  nameRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  preferredNameText: {
-    marginTop: 2,
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.xs,
-    color: "rgba(255,255,255,0.85)",
-    letterSpacing: 0.3,
-  },
-  signOutButton: {
-    marginTop: 4,
-    minHeight: 48,
-    borderRadius: radius.xl,
-    borderWidth: 1.5,
-    borderColor: colors.semantic.danger,
-    backgroundColor: colors.neutral.white,
-    alignItems: "center",
-    justifyContent: "center",
-  },
-  signOutButtonPressed: {
-    opacity: 0.6,
-  },
-  signOutLabel: {
-    fontFamily: fontFamily.bodySemibold,
-    fontSize: fontSize.base,
-    color: colors.semantic.danger,
-  },
-  subRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-  },
-  subText: {
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.sm,
-    color: "rgba(255,255,255,0.85)",
-  },
-  subDot: {
-    color: "rgba(255,255,255,0.6)",
-  },
-  statsRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 6,
-    marginTop: 2,
-  },
-  statsText: {
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.xs,
-    color: "rgba(255,255,255,0.85)",
-  },
-  body: {
-    paddingHorizontal: screenPaddingX.standard,
-    paddingTop: 20,
-    gap: 20,
-  },
-  section: {
-    gap: 10,
-  },
-  sectionHeaderRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 8,
-  },
-  sectionTitle: {
-    fontFamily: fontFamily.bodySemibold,
-    fontSize: fontSize.xs,
-    letterSpacing: 0.5,
-    color: colors.neutral.gray500,
-  },
-  badgePill: {
-    paddingHorizontal: 10,
-    paddingVertical: 3,
-    borderRadius: radius.full,
-    backgroundColor: colors.brand.verde100,
-  },
-  badgePillText: {
-    fontFamily: fontFamily.bodySemibold,
-    fontSize: fontSize["2xs"],
-    color: colors.brand.verde700,
-  },
-  card: {
-    borderRadius: radius["2xl"],
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.gray100,
-    paddingHorizontal: 16,
-    paddingVertical: 4,
-  },
-  divider: {
-    height: 1,
-    backgroundColor: colors.neutral.gray100,
-  },
-  switchRow: {
-    flexDirection: "row",
-    alignItems: "center",
-    gap: 12,
-    minHeight: 44,
-    paddingVertical: 10,
-  },
-  switchIconWrap: {
-    width: 24,
-    alignItems: "center",
-  },
-  switchLabel: {
-    flex: 1,
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.base,
-    color: colors.neutral.gray800,
-  },
-  fieldLabel: {
-    marginTop: 12,
-    fontFamily: fontFamily.bodySemibold,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray700,
-  },
-  fieldSpacing: {
-    marginTop: 10,
-    marginBottom: 4,
-  },
-  footnote: {
-    marginTop: 12,
-    marginBottom: 12,
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize["2xs"],
-    color: colors.neutral.gray400,
-  },
-  // adds the semi-transparent layer behind card
-  modalBackdrop: {
-    flex: 1,
-    backgroundColor: "rgba(0,0,0,0.5)",
-    alignItems: "center",
-    justifyContent: "center",
-    paddingHorizontal: 24,
-  },
-  // white pop-up box
-  modalCard: {
-    width: "100%",
-    borderRadius: radius["2xl"],
-    backgroundColor: colors.neutral.white,
-    padding: 20,
-    gap: 12,
-  },
-  //styling for preferred name
-  modalTitle: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.lg,
-    color: colors.neutral.gray800,
-  },
-  //styling for preferred name
-  modalSubtitle: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray500,
-  },
-  //cancel/save buttons
-  modalActions: {
-    flexDirection: "row",
-    justifyContent: "flex-end",
-    gap: 12,
-    marginTop: 4,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    fill: {
+      flex: 1,
+      backgroundColor: t.colors.bg,
+    },
+    header: {
+      paddingHorizontal: screenPaddingX.standard,
+      paddingBottom: 24,
+    },
+    identityRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 14,
+    },
+    avatarWrap: {
+      width: 68,
+      height: 68,
+    },
+    avatarCircle: {
+      width: 68,
+      height: 68,
+      borderRadius: radius.full,
+      backgroundColor: t.colors.onHeader,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    avatarInitials: {
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize["2xl"],
+      lineHeight: t.lineHeight(t.fontSize["2xl"]),
+      color: t.colors.headerGradient[0],
+    },
+    avatarStatusDot: {
+      position: "absolute",
+      right: 0,
+      bottom: 0,
+      width: 20,
+      height: 20,
+      borderRadius: radius.full,
+      backgroundColor: t.colors.brand,
+      alignItems: "center",
+      justifyContent: "center",
+      borderWidth: 2,
+      borderColor: t.colors.headerGradient[0],
+    },
+    identityText: {
+      flex: 1,
+      gap: 4,
+    },
+    name: {
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.xl,
+      lineHeight: t.lineHeight(t.fontSize.xl),
+      color: t.colors.onHeader,
+    },
+    preferredNameText: {
+      marginTop: 2,
+      fontFamily: fontFamily.bodyMedium,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.onHeader,
+      letterSpacing: 0.3,
+    },
+    subRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      flexWrap: "wrap",
+      gap: 6,
+    },
+    subText: {
+      fontFamily: fontFamily.bodyMedium,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.onHeader,
+    },
+    subDot: {
+      color: t.colors.onHeader,
+    },
+    statsRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      marginTop: 2,
+    },
+    statsText: {
+      flex: 1,
+      fontFamily: fontFamily.bodyMedium,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.onHeader,
+    },
+    body: {
+      paddingHorizontal: screenPaddingX.standard,
+      paddingTop: 20,
+      gap: 20,
+    },
+    section: {
+      gap: 10,
+    },
+    sectionHeaderRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 8,
+    },
+    sectionTitle: {
+      fontFamily: fontFamily.bodySemibold,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      letterSpacing: 0.5,
+      color: t.colors.muted,
+    },
+    badgePill: {
+      paddingHorizontal: 10,
+      paddingVertical: 3,
+      borderRadius: radius.full,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.divider,
+    },
+    badgePillText: {
+      fontFamily: fontFamily.bodySemibold,
+      fontSize: t.fontSize["2xs"],
+      lineHeight: t.lineHeight(t.fontSize["2xs"]),
+      color: t.colors.text,
+    },
+    card: {
+      borderRadius: radius["2xl"],
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.divider,
+      paddingHorizontal: 16,
+      paddingVertical: 4,
+    },
+    divider: {
+      height: 1,
+      backgroundColor: t.colors.divider,
+    },
+    switchRow: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 12,
+      minHeight: 44,
+      paddingVertical: 10,
+    },
+    switchIconWrap: {
+      width: 24,
+      alignItems: "center",
+    },
+    switchLabel: {
+      flex: 1,
+      fontFamily: fontFamily.bodyMedium,
+      fontSize: t.fontSize.base,
+      lineHeight: t.lineHeight(t.fontSize.base),
+      color: t.colors.text,
+    },
+    fieldLabel: {
+      marginTop: 12,
+      fontFamily: fontFamily.bodySemibold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+    },
+    fieldSpacing: {
+      marginTop: 10,
+      marginBottom: 12,
+    },
+    signOutButton: {
+      marginTop: 4,
+      minHeight: 48,
+      borderRadius: radius.xl,
+      borderWidth: 1.5,
+      borderColor: t.colors.danger,
+      backgroundColor: t.colors.surface,
+      alignItems: "center",
+      justifyContent: "center",
+    },
+    signOutButtonPressed: {
+      opacity: 0.6,
+    },
+    signOutLabel: {
+      fontFamily: fontFamily.bodySemibold,
+      fontSize: t.fontSize.base,
+      lineHeight: t.lineHeight(t.fontSize.base),
+      color: t.colors.danger,
+    },
+    // semi-transparent layer behind the pop-up
+    modalBackdrop: {
+      flex: 1,
+      backgroundColor: "rgba(0,0,0,0.5)",
+      alignItems: "center",
+      justifyContent: "center",
+      paddingHorizontal: 24,
+    },
+    // pop-up box
+    modalCard: {
+      width: "100%",
+      borderRadius: radius["2xl"],
+      backgroundColor: t.colors.surface,
+      padding: 20,
+      gap: 12,
+    },
+    modalTitle: {
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.lg,
+      lineHeight: t.lineHeight(t.fontSize.lg),
+      color: t.colors.text,
+    },
+    modalSubtitle: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+    },
+    // cancel/save buttons
+    modalActions: {
+      flexDirection: "row",
+      justifyContent: "flex-end",
+      gap: 12,
+      marginTop: 4,
+    },
+  });
