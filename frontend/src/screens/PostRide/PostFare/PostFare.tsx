@@ -8,7 +8,9 @@ import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/src/components/PrimaryButton';
-import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
+import { fontFamily, radius, screenPaddingX } from '@/src/theme';
+import type { Theme } from '@/src/theme/useTheme';
+import { useThemedStyles } from '@/src/theme/useThemedStyles';
 
 import {
   FUEL_CONSUMPTION_L_PER_100KM,
@@ -25,6 +27,7 @@ const MAX_ADJUSTMENT_PERCENT = 20;
 export function PostFare() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { styles, theme } = useThemedStyles(makeStyles);
   const { draft, updateDraft } = usePostRideDraft();
 
   const fuelType = draft.fuelType ?? 'hybrid';
@@ -74,9 +77,10 @@ export function PostFare() {
               maximumValue={MAX_ADJUSTMENT_PERCENT}
               step={1}
               value={adjustmentPercent}
-              minimumTrackTintColor={colors.brand.verde500}
-              maximumTrackTintColor={colors.neutral.gray200}
-              thumbTintColor={colors.brand.verde600}
+              minimumTrackTintColor={theme.colors.brand}
+              maximumTrackTintColor={theme.colors.border}
+              thumbTintColor={theme.colors.brand}
+              accessibilityLabel="Fare adjustment percentage"
               onValueChange={setAdjustment}
             />
             <View style={styles.sliderScaleRow}>
@@ -90,7 +94,11 @@ export function PostFare() {
                   : `${adjustmentPercent > 0 ? '+' : ''}${adjustmentPercent}% ${adjustmentPercent > 0 ? 'above' : 'below'} calculated fare`}
               </Text>
               {adjustmentPercent !== 0 && (
-                <Pressable onPress={() => setAdjustment(0)}>
+                <Pressable
+                  onPress={() => setAdjustment(0)}
+                  style={styles.resetButton}
+                  accessibilityRole="button"
+                  accessibilityLabel="Reset fare adjustment">
                   <Text style={styles.resetText}>Reset</Text>
                 </Pressable>
               )}
@@ -100,7 +108,7 @@ export function PostFare() {
 
         {greenScore && co2Total !== undefined && (
           <View style={styles.greenScoreBanner}>
-            <Ionicons name="leaf" size={18} color={colors.brand.verde600} />
+            <Ionicons name="leaf" size={18} color={theme.colors.brand} />
             <View style={styles.greenScoreTextWrap}>
               <Text style={styles.greenScoreHeading}>
                 {greenScore.grade} Green Score · {co2Total.toFixed(2)} kg CO
@@ -122,6 +130,7 @@ export function PostFare() {
 }
 
 function FareRow({ label, value }: { label: string; value: string }) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View style={styles.fareRow}>
       <Text style={styles.fareRowLabel}>{label}</Text>
@@ -130,129 +139,156 @@ function FareRow({ label, value }: { label: string; value: string }) {
   );
 }
 
-const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
-    backgroundColor: colors.neutral.white,
-  },
-  content: {
-    paddingHorizontal: screenPaddingX.standard,
-    paddingTop: 20,
-  },
-  fareCard: {
-    borderWidth: 2,
-    borderColor: colors.brand.verde200,
-    borderRadius: radius['3xl'],
-    padding: 16,
-  },
-  sectionLabel: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize['2xs'],
-    color: colors.neutral.gray400,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  fareRow: {
-    marginTop: 14,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  fareRowLabel: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray500,
-  },
-  fareRowValue: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray900,
-  },
-  divider: {
-    marginTop: 16,
-    height: 1,
-    backgroundColor: colors.neutral.gray100,
-  },
-  totalRow: {
-    marginTop: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  totalLabel: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.base,
-    color: colors.neutral.gray900,
-  },
-  totalValue: {
-    fontFamily: fontFamily.headingExtrabold,
-    fontSize: fontSize['2xl'],
-    color: colors.brand.verde600,
-  },
-  adjustSection: {
-    marginTop: 16,
-  },
-  slider: {
-    width: '100%',
-    height: 36,
-  },
-  sliderScaleRow: {
-    marginTop: -6,
-    flexDirection: 'row',
-    justifyContent: 'space-between',
-  },
-  sliderScaleText: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize['2xs'],
-    color: colors.neutral.gray400,
-  },
-  adjustmentIndicator: {
-    marginTop: 10,
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  adjustmentText: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.sm,
-    color: colors.brand.verde700,
-  },
-  resetText: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray400,
-    textDecorationLine: 'underline',
-  },
-  greenScoreBanner: {
-    marginTop: 20,
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-    padding: 16,
-    borderRadius: radius['2xl'],
-    backgroundColor: colors.brand.verde50,
-  },
-  greenScoreTextWrap: {
-    flex: 1,
-  },
-  greenScoreHeading: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.sm,
-    color: colors.brand.verde700,
-  },
-  subscript: {
-    fontSize: fontSize['2xs'],
-  },
-  greenScoreBody: {
-    marginTop: 2,
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.brand.verde600,
-  },
-  actions: {
-    paddingHorizontal: screenPaddingX.standard,
-    paddingTop: 16,
-    paddingBottom: 24,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    fill: {
+      flex: 1,
+      backgroundColor: t.colors.bg,
+    },
+    content: {
+      paddingHorizontal: screenPaddingX.standard,
+      paddingTop: 20,
+    },
+    fareCard: {
+      borderWidth: 2,
+      borderColor: t.colors.brand,
+      backgroundColor: t.colors.surface,
+      borderRadius: radius['3xl'],
+      padding: 16,
+    },
+    sectionLabel: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize['2xs'],
+      lineHeight: t.lineHeight(t.fontSize['2xs']),
+      color: t.colors.muted,
+      textTransform: 'uppercase',
+      letterSpacing: 0.5,
+    },
+    fareRow: {
+      marginTop: 14,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      columnGap: 12,
+    },
+    fareRowLabel: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+    },
+    fareRowValue: {
+      flexShrink: 1,
+      textAlign: 'right',
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.text,
+    },
+    divider: {
+      marginTop: 16,
+      height: 1,
+      backgroundColor: t.colors.divider,
+    },
+    totalRow: {
+      marginTop: 16,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      columnGap: 12,
+    },
+    totalLabel: {
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.base,
+      lineHeight: t.lineHeight(t.fontSize.base),
+      color: t.colors.text,
+    },
+    totalValue: {
+      fontFamily: fontFamily.headingExtrabold,
+      fontSize: t.fontSize['2xl'],
+      lineHeight: t.lineHeight(t.fontSize['2xl']),
+      color: t.colors.brand,
+    },
+    adjustSection: {
+      marginTop: 16,
+    },
+    slider: {
+      width: '100%',
+      height: 44,
+    },
+    sliderScaleRow: {
+      marginTop: -6,
+      flexDirection: 'row',
+      justifyContent: 'space-between',
+    },
+    sliderScaleText: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize['2xs'],
+      lineHeight: t.lineHeight(t.fontSize['2xs']),
+      color: t.colors.textSecondary,
+    },
+    adjustmentIndicator: {
+      marginTop: 10,
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    adjustmentText: {
+      textAlign: 'center',
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.brand,
+    },
+    resetButton: {
+      minHeight: 44,
+      justifyContent: 'center',
+    },
+    resetText: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+      textDecorationLine: 'underline',
+    },
+    greenScoreBanner: {
+      marginTop: 20,
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 10,
+      padding: 16,
+      borderRadius: radius['2xl'],
+      backgroundColor: t.colors.surface,
+      borderWidth: 1.5,
+      borderColor: t.colors.brand,
+    },
+    greenScoreTextWrap: {
+      flex: 1,
+    },
+    greenScoreHeading: {
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.brand,
+    },
+    subscript: {
+      fontSize: t.fontSize['2xs'],
+    },
+    greenScoreBody: {
+      marginTop: 2,
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+    },
+    actions: {
+      paddingHorizontal: screenPaddingX.standard,
+      paddingTop: 16,
+      paddingBottom: 24,
+      backgroundColor: t.colors.bg,
+    },
+  });

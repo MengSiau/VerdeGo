@@ -16,6 +16,7 @@ import { useAuth } from "@/src/auth/AuthProvider";
 import {
   DEFAULT_USER_PROFILE,
   type TextSizePreference,
+  type ThemeMode,
   type UserProfile,
 } from "./currentUser";
 
@@ -25,6 +26,7 @@ type UserDetailStoreValue = {
   togglePushNotifications: () => void;
   setTextSize: (size: TextSizePreference) => void;
   toggleHighContrastMode: () => void;
+  setThemeMode: (m: ThemeMode) => void;
 };
 
 // Google (via Supabase) gives us the account holder's name as one full-name string.
@@ -73,6 +75,7 @@ export function UserDetailStoreProvider({ children }: { children: ReactNode }) {
       notificationEnabled: prev.notificationEnabled,
       prefTextSize: prev.prefTextSize,
       contrast: prev.contrast,
+      themeMode: prev.themeMode,
       // personal details come from the signed-in account (left blank when signed out)
       ...(user
         ? { ...splitName(user.user_metadata), email: user.email ?? "" }
@@ -88,13 +91,15 @@ export function UserDetailStoreProvider({ children }: { children: ReactNode }) {
       profile,
       //changing general profile fields
       updateProfile: (fields) => setProfile((prev) => ({ ...prev, ...fields })),
+      // light / dark
+      setThemeMode: (m) => setProfile((prev) => ({ ...prev, themeMode: m })),
       // notifs on and off
       togglePushNotifications: () =>
         setProfile((prev) => ({
           ...prev,
           notificationEnabled: !prev.notificationEnabled,
         })),
-      //changing between normal/karge
+      //changing between normal/large
       setTextSize: (size) =>
         setProfile((prev) => ({ ...prev, prefTextSize: size })),
       //high contrast mode on and off
