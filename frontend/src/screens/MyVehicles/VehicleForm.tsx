@@ -13,14 +13,11 @@ import { getVehicleMakes, getVehicleModels, getModelEmissions, type VehicleMake,
 import { getGreenScore } from '@/src/utils/greenScore';
 import { TextField } from '@/src/components/TextField';
 import { useVehicles } from '@/src/data/VehiclesStore';
-import { fontFamily, radius, screenPaddingX } from '@/src/theme';
-import type { Theme } from '@/src/theme/useTheme';
-import { useThemedStyles } from '@/src/theme/useThemedStyles';
+import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
 
 export function VehicleForm() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { styles, theme } = useThemedStyles(makeStyles);
   const { vehicleId } = useLocalSearchParams<{ vehicleId?: string }>();
   const { vehicles, loading, error, refresh, addVehicle, updateVehicle } = useVehicles();
   const existingVehicle = vehicles.find((vehicle) => vehicle.vehicle_id === vehicleId);
@@ -146,19 +143,15 @@ export function VehicleForm() {
 
   return (
     <View style={styles.fill}>
-      {/* Header is dark in every palette, so the status bar is always light */}
       <StatusBar style="light" />
-      <LinearGradient
-        colors={[...theme.colors.headerGradient]}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
+      <LinearGradient colors={gradients.headerHero} start={{ x: 0, y: 0 }} end={{ x: 1, y: 1 }}
         style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerRow}>
           <Pressable onPress={() => router.back()} disabled={saving} hitSlop={8} style={styles.backButton}
             accessibilityLabel="Go back" accessibilityRole="button">
-            <Ionicons name="chevron-back" size={24} color={theme.colors.onHeader} />
+            <Ionicons name="chevron-back" size={24} color={colors.neutral.white} />
           </Pressable>
-          <View style={styles.headerTextWrap}>
+          <View>
             <Text style={styles.headerTitle}>{isEditing ? 'Edit Vehicle' : 'Add Vehicle'}</Text>
             <Text style={styles.headerSubtitle}>Enter your vehicle details</Text>
           </View>
@@ -166,7 +159,7 @@ export function VehicleForm() {
       </LinearGradient>
       <ScrollView style={styles.fill} contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 24 }]}
         keyboardShouldPersistTaps="handled">
-        {loading ? <ActivityIndicator size="large" color={theme.colors.brand} /> : error ? (
+        {loading ? <ActivityIndicator size="large" color={colors.brand.verde600} /> : error ? (
           <View>
             <Text style={styles.fieldLabel}>{error}</Text>
             <PrimaryButton label="Try Again" onPress={() => void refresh()} />
@@ -205,7 +198,7 @@ export function VehicleForm() {
                   <PrimaryButton label="Try Again" onPress={() => setRetry((value) => value + 1)} />
                 </View>
               )}
-              {emissionsLoading && <ActivityIndicator style={styles.fieldGroup} color={theme.colors.brand} />}
+              {emissionsLoading && <ActivityIndicator style={styles.fieldGroup} color={colors.brand.verde600} />}
               {emissionsError && (
                 <View style={styles.fieldGroup}>
                   <Text style={styles.fieldLabel}>{emissionsError}</Text>
@@ -215,9 +208,10 @@ export function VehicleForm() {
               {selectedModel?.co2_g_per_km != null && (
                 <View style={styles.summary}>
                   <GreenScoreBadge grade={getGreenScore(selectedModel.co2_g_per_km)} size={44} />
-                  <View style={styles.summaryText}>
+                  <View>
                     <Text style={styles.fieldLabel}>Green Score</Text>
                     <Text style={styles.emissions}>{selectedModel.co2_g_per_km.toFixed(2)} g CO2e/km</Text>
+                    
                   </View>
                 </View>
               )}
@@ -236,88 +230,67 @@ export function VehicleForm() {
   );
 }
 
-const makeStyles = (t: Theme) =>
-  StyleSheet.create({
-    fill: {
-      flex: 1,
-      backgroundColor: t.colors.bg,
-    },
-    header: {
-      paddingHorizontal: screenPaddingX.standard,
-      paddingBottom: 20,
-    },
-    headerRow: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 4,
-    },
-    headerTextWrap: {
-      flex: 1,
-    },
-    backButton: {
-      width: 44,
-      height: 44,
-      marginLeft: -10,
-      alignItems: 'center',
-      justifyContent: 'center',
-    },
-    headerTitle: {
-      fontFamily: fontFamily.headingBold,
-      fontSize: t.fontSize.xl,
-      lineHeight: t.lineHeight(t.fontSize.xl),
-      color: t.colors.onHeader,
-    },
-    headerSubtitle: {
-      marginTop: 2,
-      fontFamily: fontFamily.bodyRegular,
-      fontSize: t.fontSize.sm,
-      lineHeight: t.lineHeight(t.fontSize.sm),
-      color: t.colors.onHeader,
-    },
-    content: {
-      paddingHorizontal: screenPaddingX.standard,
-      paddingTop: 20,
-    },
-    section: {
-      backgroundColor: t.colors.surface,
-      borderRadius: radius['2xl'],
-      borderWidth: 1,
-      borderColor: t.colors.divider,
-      padding: 16,
-      marginBottom: 16,
-    },
-    sectionLabel: {
-      fontFamily: fontFamily.headingSemibold,
-      fontSize: t.fontSize.xs,
-      lineHeight: t.lineHeight(t.fontSize.xs),
-      color: t.colors.muted,
-      letterSpacing: 0.5,
-      marginBottom: 16,
-    },
-    fieldGroup: {
-      marginTop: 16,
-    },
-    summary: {
-      marginTop: 16,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    summaryText: {
-      flex: 1,
-    },
-    emissions: {
-      fontFamily: fontFamily.bodyRegular,
-      fontSize: t.fontSize.sm,
-      lineHeight: t.lineHeight(t.fontSize.sm),
-      color: t.colors.textSecondary,
-    },
-    fieldLabel: {
-      marginTop: 16,
-      marginBottom: 8,
-      fontFamily: fontFamily.headingSemibold,
-      fontSize: t.fontSize.sm,
-      lineHeight: t.lineHeight(t.fontSize.sm),
-      color: t.colors.text,
-    },
-  });
+const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+    backgroundColor: colors.neutral.white,
+  },
+  header: {
+    paddingHorizontal: screenPaddingX.standard,
+    paddingBottom: 20,
+  },
+  headerRow: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 4,
+  },
+  backButton: {
+    width: 44,
+    height: 44,
+    marginLeft: -10,
+    alignItems: 'center',
+    justifyContent: 'center',
+  },
+  headerTitle: {
+    fontFamily: fontFamily.headingBold,
+    fontSize: fontSize.xl,
+    color: colors.neutral.white,
+  },
+  headerSubtitle: {
+    marginTop: 2,
+    fontFamily: fontFamily.bodyRegular,
+    fontSize: fontSize.sm,
+    color: 'rgba(255,255,255,0.85)',
+  },
+  content: {
+    paddingHorizontal: screenPaddingX.standard,
+    paddingTop: 20,
+  },
+  section: {
+    backgroundColor: colors.neutral.white,
+    borderRadius: radius['2xl'],
+    borderWidth: 1,
+    borderColor: colors.neutral.gray100,
+    padding: 16,
+    marginBottom: 16,
+  },
+  sectionLabel: {
+    fontFamily: fontFamily.headingSemibold,
+    fontSize: fontSize.xs,
+    color: colors.neutral.gray400,
+    letterSpacing: 0.5,
+    marginBottom: 16,
+  },
+  fieldGroup: {
+    marginTop: 16,
+  },
+  summary: { marginTop: 16, flexDirection: 'row', alignItems: 'center', gap: 12 },
+  emissions: { fontFamily: fontFamily.bodyRegular, fontSize: fontSize.sm, color: colors.neutral.gray700 },
+  fieldLabel: {
+    marginTop: 16,
+    marginBottom: 8,
+    fontFamily: fontFamily.headingSemibold,
+    fontSize: fontSize.sm,
+    color: colors.neutral.gray700,
+  },
+});

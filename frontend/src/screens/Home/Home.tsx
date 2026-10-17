@@ -1,63 +1,47 @@
-import { Ionicons } from "@expo/vector-icons";
-import { LinearGradient } from "expo-linear-gradient";
-import { useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { useMemo, useState } from "react";
-import { Button, ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from '@expo/vector-icons';
+import { LinearGradient } from 'expo-linear-gradient';
+import { useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { useMemo, useState } from 'react';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
+import { BottomNav } from '@/src/components/BottomNav';
+import { FilterChips } from '@/src/components/FilterChips';
+import { PrimaryButton } from '@/src/components/PrimaryButton';
+import { RideCard } from '@/src/components/RideCard';
+import { useBrowseRides } from '@/src/hooks/useBrowseRides';
+import { calculateCo2SavedKg } from '@/src/utils/co2savings';
+import { fontFamily, radius, screenPaddingX } from '@/src/theme';
+import type { Theme } from '@/src/theme/useTheme';
+import { useThemedStyles } from '@/src/theme/useThemedStyles';
 
-import { useAuth } from "@/src/auth/AuthProvider";
-import { BottomNav } from "@/src/components/BottomNav";
-import { FilterChips } from "@/src/components/FilterChips";
-import { RideCard } from "@/src/components/RideCard";
-import { CURRENT_USER_ID } from "@/src/data/currentUser";
-import { useRidesStore } from "@/src/data/RidesStore";
-import { fontFamily, radius, screenPaddingX } from "@/src/theme";
-import type { Theme } from "@/src/theme/useTheme";
-import { useThemedStyles } from "@/src/theme/useThemedStyles";
-import { calculateCo2SavedKg } from "@/src/utils/co2savings";
-
-type SortFilter = "eco" | "cost" | "time";
+type SortFilter = 'eco' | 'cost' | 'time';
 
 const SORT_LABEL: Record<SortFilter, string> = {
-  eco: "sustainability",
-  cost: "price",
-  time: "arrival time",
+  eco: 'sustainability',
+  cost: 'price',
+  time: 'arrival time',
 };
 
 export function Home() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { styles, theme } = useThemedStyles(makeStyles);
-  const { rides } = useRidesStore();
-  const [sort, setSort] = useState<SortFilter>("eco");
-  const { signOut } = useAuth();
+  const { rides, loading, error, refresh } = useBrowseRides();
+  const [sort, setSort] = useState<SortFilter>('eco');
 
-  // Don't show the viewer their own posted rides in the browse feed - you wouldn't
-  // request to join a ride you're the one offering.
-  const browsableRides = useMemo(
-    () => rides.filter((ride) => ride.driverId !== CURRENT_USER_ID),
-    [rides],
-  );
-
+  // The backend's GET /api/rides already excludes the caller's own vehicles, so no
+  // client-side filtering is needed here (unlike the old local demo data).
   const totalCo2Saved = useMemo(
-    () =>
-      browsableRides.reduce(
-        (sum, ride) =>
-          sum + calculateCo2SavedKg(ride.distanceKm, ride.confirmedPassengers.length),
-        0,
-      ),
-    [browsableRides],
+    () => rides.reduce((sum, ride) => sum + calculateCo2SavedKg(ride.distanceKm, ride.confirmedPassengers.length), 0),
+    [rides]
   );
 
   return (
     <View style={styles.fill}>
       {/* Header is dark green/black in every palette, so the status bar is always light */}
       <StatusBar style="light" />
-      <LinearGradient
-        colors={[...theme.colors.headerGradient]}
-        style={[styles.header, { paddingTop: insets.top + 12 }]}
-      >
+      <LinearGradient colors={[...theme.colors.headerGradient]} style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerTopRow}>
           <Text style={styles.headerTitle}>Find a Ride</Text>
           <View style={styles.co2Badge}>
@@ -76,44 +60,48 @@ export function Home() {
         <View style={styles.filterSection}>
           <FilterChips
             options={[
-              {
-                label: "Eco",
-                value: "eco",
-                icon: (color) => <Ionicons name="leaf" size={16} color={color} />,
-              },
-              {
-                label: "Cost",
-                value: "cost",
-                icon: (color) => <Ionicons name="cash-outline" size={16} color={color} />,
-              },
-              {
-                label: "Time",
-                value: "time",
-                icon: (color) => <Ionicons name="time-outline" size={16} color={color} />,
-              },
+              { label: 'Eco', value: 'eco', icon: (color) => <Ionicons name="leaf" size={16} color={color} /> },
+              { label: 'Cost', value: 'cost', icon: (color) => <Ionicons name="cash-outline" size={16} color={color} /> },
+              { label: 'Time', value: 'time', icon: (color) => <Ionicons name="time-outline" size={16} color={color} /> },
             ]}
             value={sort}
             onChange={setSort}
           />
           <Text style={styles.resultsText}>
-            {browsableRides.length} rides available · sorted by {SORT_LABEL[sort]}
+            {rides.length} rides available · sorted by {SORT_LABEL[sort]}
           </Text>
         </View>
-        <Button title="Temp Sign Out" onPress={signOut} color={theme.colors.brand} />
 
-        <ScrollView
-          style={styles.fill}
-          contentContainerStyle={styles.listContent}
-          showsVerticalScrollIndicator={false}
-        >
-          {browsableRides.map((ride) => (
-            <RideCard
-              key={ride.id}
-              ride={ride}
-              onPress={() => router.push(`/ride-details/${ride.id}`)}
-            />
-          ))}
-        </ScrollView>
+        {loading && rides.length === 0 ? (
+          <View style={styles.centeredState}>
+            <ActivityIndicator size="large" color={theme.colors.brand} />
+          </View>
+        ) : error ? (
+          <View style={styles.centeredState}>
+            <Text style={styles.errorTitle}>Unable to load rides</Text>
+            <Text style={styles.errorSubtitle}>{error}</Text>
+            <View style={styles.errorButton}>
+              <PrimaryButton label="Try Again" onPress={() => void refresh()} />
+            </View>
+          </View>
+        ) : rides.length === 0 ? (
+          <View style={styles.centeredState}>
+            <Text style={styles.errorTitle}>No rides available yet</Text>
+            <Text style={styles.errorSubtitle}>Check back soon, or be the first to post one.</Text>
+          </View>
+        ) : (
+          <ScrollView
+            style={styles.fill}
+            contentContainerStyle={styles.listContent}
+            showsVerticalScrollIndicator={false}
+            refreshControl={
+              <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={theme.colors.brand} />
+            }>
+            {rides.map((ride) => (
+              <RideCard key={ride.id} ride={ride} onPress={() => router.push(`/ride-details/${ride.id}`)} />
+            ))}
+          </ScrollView>
+        )}
       </View>
 
       <BottomNav active="feed" />
@@ -132,10 +120,10 @@ const makeStyles = (t: Theme) =>
       paddingBottom: 20,
     },
     headerTopRow: {
-      flexDirection: "row",
-      alignItems: "center",
-      justifyContent: "space-between",
-      flexWrap: "wrap",
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap',
       gap: 8,
     },
     headerTitle: {
@@ -146,13 +134,13 @@ const makeStyles = (t: Theme) =>
       color: t.colors.onHeader,
     },
     co2Badge: {
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: 6,
       paddingHorizontal: 12,
       paddingVertical: 6,
       borderRadius: radius.full,
-      backgroundColor: "rgba(255,255,255,0.2)",
+      backgroundColor: 'rgba(255,255,255,0.2)',
     },
     co2BadgeText: {
       fontFamily: fontFamily.headingSemibold,
@@ -162,8 +150,8 @@ const makeStyles = (t: Theme) =>
     },
     searchBar: {
       marginTop: 16,
-      flexDirection: "row",
-      alignItems: "center",
+      flexDirection: 'row',
+      alignItems: 'center',
       gap: 8,
       minHeight: 50,
       paddingHorizontal: 16,
@@ -201,5 +189,29 @@ const makeStyles = (t: Theme) =>
       paddingTop: 12,
       paddingBottom: 20,
       gap: 12,
+    },
+    centeredState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: screenPaddingX.standard,
+      gap: 8,
+    },
+    errorTitle: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.base,
+      lineHeight: t.lineHeight(t.fontSize.base),
+      color: t.colors.text,
+    },
+    errorSubtitle: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+      textAlign: 'center',
+    },
+    errorButton: {
+      marginTop: 12,
+      alignSelf: 'stretch',
     },
   });

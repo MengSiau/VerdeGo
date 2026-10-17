@@ -5,15 +5,13 @@ import { Pressable, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { ProgressBar } from '@/src/components/ProgressBar';
-import { fontFamily, screenPaddingX } from '@/src/theme';
-import type { Theme } from '@/src/theme/useTheme';
-import { useThemedStyles } from '@/src/theme/useThemedStyles';
+import { colors, fontFamily, fontSize, gradients, screenPaddingX } from '@/src/theme';
 
 /*
 Usage: 
 Defines the top header used in the post-a-ride flow. 
 Displays name of step, progress bar and back btn
-*/
+*/ 
 
 const TOTAL_STEPS = 4;
 
@@ -25,20 +23,16 @@ type PostRideHeaderProps = {
 export function PostRideHeader({ title, step }: PostRideHeaderProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { styles, theme } = useThemedStyles(makeStyles);
 
   return (
-    <LinearGradient
-      colors={[...theme.colors.headerGradient]}
-      style={[styles.header, { paddingTop: insets.top + 12 }]}>
+    <LinearGradient colors={gradients.headerHero} style={[styles.header, { paddingTop: insets.top + 12 }]}>
       <View style={styles.row}>
         <Pressable
           onPress={() => router.back()}
           hitSlop={8}
-          style={styles.backButton}
           accessibilityLabel="Go back"
           accessibilityRole="button">
-          <Ionicons name="chevron-back" size={24} color={theme.colors.onHeader} />
+          <Ionicons name="chevron-back" size={24} color={colors.neutral.white} />
         </Pressable>
         <Text style={styles.title}>{title}</Text>
         <Text style={styles.stepLabel}>
@@ -52,36 +46,28 @@ export function PostRideHeader({ title, step }: PostRideHeaderProps) {
   );
 }
 
-const makeStyles = (t: Theme) =>
-  StyleSheet.create({
-    header: {
-      paddingHorizontal: screenPaddingX.standard,
-      paddingBottom: 16,
-    },
-    row: {
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 12,
-    },
-    backButton: {
-      minWidth: 44,
-      minHeight: 44,
-      justifyContent: 'center',
-    },
-    title: {
-      flex: 1,
-      fontFamily: fontFamily.headingBold,
-      fontSize: t.fontSize.lg,
-      lineHeight: t.lineHeight(t.fontSize.lg),
-      color: t.colors.onHeader,
-    },
-    stepLabel: {
-      fontFamily: fontFamily.bodyRegular,
-      fontSize: t.fontSize.sm,
-      lineHeight: t.lineHeight(t.fontSize.sm),
-      color: t.colors.onHeader,
-    },
-    progressWrap: {
-      marginTop: 16,
-    },
-  });
+const styles = StyleSheet.create({
+  header: {
+    paddingHorizontal: screenPaddingX.standard,
+    paddingBottom: 16,
+  },
+  row: {
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 12,
+  },
+  title: {
+    flex: 1,
+    fontFamily: fontFamily.headingBold,
+    fontSize: fontSize.lg,
+    color: colors.neutral.white,
+  },
+  stepLabel: {
+    fontFamily: fontFamily.bodyRegular,
+    fontSize: fontSize.sm,
+    color: 'rgba(255,255,255,0.8)',
+  },
+  progressWrap: {
+    marginTop: 16,
+  },
+});

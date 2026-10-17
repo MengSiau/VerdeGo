@@ -1,24 +1,50 @@
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { StyleSheet, Text, View } from "react-native";
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { useState } from 'react';
+import { ActivityIndicator, Alert, StyleSheet, Text, View } from 'react-native';
 
-import { PrimaryButton } from "@/src/components/PrimaryButton";
-import { RideOverview } from "@/src/components/RideOverview";
-import { useRidesStore } from "@/src/data/RidesStore";
-import { fontFamily } from "@/src/theme";
-import type { Theme } from "@/src/theme/useTheme";
-import { useThemedStyles } from "@/src/theme/useThemedStyles";
+import { requestToJoinRide } from '@/src/api/rides';
+import { PrimaryButton } from '@/src/components/PrimaryButton';
+import { RideOverview } from '@/src/components/RideOverview';
+import { useRideDetails } from '@/src/hooks/useRideDetails';
+import { fontFamily } from '@/src/theme';
+import type { Theme } from '@/src/theme/useTheme';
+import { useThemedStyles } from '@/src/theme/useThemedStyles';
 
 export function RideDetails() {
   const router = useRouter();
-  const { styles } = useThemedStyles(makeStyles);
+  const { styles, theme } = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { rides } = useRidesStore();
-  const ride = rides.find((r) => r.id === id);
+  const { ride, loading, error, refresh } = useRideDetails(id);
+  const [requesting, setRequesting] = useState(false);
 
-  if (!ride) {
+  const handleRequestToJoin = async () => {
+    if (!id) return;
+    setRequesting(true);
+    try {
+      await requestToJoinRide(id);
+      router.push(`/ride-request-sent/${id}`);
+    } catch (e) {
+      Alert.alert('Unable to send request', e instanceof Error ? e.message : 'Please try again.');
+    } finally {
+      setRequesting(false);
+    }
+  };
+
+  if (loading && !ride) {
     return (
-      <View style={styles.notFound}>
-        <Text style={styles.notFoundText}>Ride not found.</Text>
+      <View style={styles.centeredState}>
+        <ActivityIndicator size="large" color={theme.colors.brand} />
+      </View>
+    );
+  }
+
+  if (error || !ride) {
+    return (
+      <View style={styles.centeredState}>
+        <Text style={styles.notFoundText}>{error ?? 'Ride not found.'}</Text>
+        <View style={styles.retryButton}>
+          <PrimaryButton label="Try Again" onPress={() => void refresh()} />
+        </View>
       </View>
     );
   }
@@ -27,10 +53,10 @@ export function RideDetails() {
     <RideOverview
       ride={ride}
       actions={
-        // TODO: submit the actual join request to backend once it exists.
         <PrimaryButton
-          label="Request to Join"
-          onPress={() => router.push(`/ride-request-sent/${ride.id}`)}
+          label={requesting ? 'Sending Request...' : 'Request to Join'}
+          disabled={requesting}
+          onPress={handleRequestToJoin}
         />
       }
     />
@@ -39,10 +65,12 @@ export function RideDetails() {
 
 const makeStyles = (t: Theme) =>
   StyleSheet.create({
-    notFound: {
+    centeredState: {
       flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+      gap: 12,
       backgroundColor: t.colors.bg,
     },
     notFoundText: {
@@ -50,5 +78,9 @@ const makeStyles = (t: Theme) =>
       fontSize: t.fontSize.sm,
       lineHeight: t.lineHeight(t.fontSize.sm),
       color: t.colors.textSecondary,
+      textAlign: 'center',
+    },
+    retryButton: {
+      alignSelf: 'stretch',
     },
   });

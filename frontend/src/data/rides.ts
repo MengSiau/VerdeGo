@@ -1,6 +1,7 @@
+import { CURRENT_USER_ID, CURRENT_USER_NAME } from './currentUser';
+
 export type Passenger = {
   name: string;
-  pickup: string;
 };
 
 export type Ride = {
@@ -23,7 +24,7 @@ export type Ride = {
   departureTime: string;
   dropoffTimeEstimate: string;
   distanceKm: number;
-  seats: number;
+  seats: number; // seats still open, not the vehicle's total capacity - don't subtract confirmedPassengers.length from this
   durationMinutes: number;
   price: number;
   co2SavedKg: number; // saved vs driving alone
@@ -67,7 +68,7 @@ export const DUMMY_RIDES: Ride[] = [
     price: 4.2,
     co2SavedKg: 0.58,
     co2EstimateKg: 0.27,
-    confirmedPassengers: [{ name: 'James Chen', pickup: 'Springvale Stn' }],
+    confirmedPassengers: [{ name: 'James Chen' }],
   },
   {
     id: '2',
@@ -113,7 +114,7 @@ export const DUMMY_RIDES: Ride[] = [
     price: 5.8,
     co2SavedKg: 1.1,
     co2EstimateKg: 0.35,
-    confirmedPassengers: [{ name: 'Arjun Patel', pickup: 'Oakleigh Stn' }],
+    confirmedPassengers: [{ name: 'Arjun Patel' }],
   },
   {
     id: '4',
@@ -138,7 +139,86 @@ export const DUMMY_RIDES: Ride[] = [
     co2EstimateKg: 0.22,
     confirmedPassengers: [],
   },
+  {
+    id: '5',
+    driverId: 'u-priya',
+    driverName: 'Priya Sharma',
+    rating: 5,
+    ratingCount: 47,
+    pickup: 'Glen Waverley Station',
+    destination: 'Monash Clayton Campus',
+    pickupLat: -37.8797,
+    pickupLng: 145.1647,
+    destinationLat: CLAYTON_LAT,
+    destinationLng: CLAYTON_LNG,
+    date: 'Mon, 11 Aug 2025',
+    departureTime: '8:15 AM',
+    dropoffTimeEstimate: '8:33 AM',
+    distanceKm: 18.4,
+    seats: 2,
+    durationMinutes: 18,
+    price: 4.2,
+    co2SavedKg: 0.58,
+    co2EstimateKg: 0.27,
+    confirmedPassengers: [],
+  },
+  {
+    id: '6',
+    driverId: CURRENT_USER_ID,
+    driverName: CURRENT_USER_NAME,
+    rating: 5,
+    ratingCount: 0,
+    pickup: 'Glen Waverley Station',
+    destination: 'Monash Clayton Campus',
+    pickupLat: -37.8797,
+    pickupLng: 145.1647,
+    destinationLat: CLAYTON_LAT,
+    destinationLng: CLAYTON_LNG,
+    date: 'Wed, 13 Aug 2025',
+    departureTime: '8:15 AM',
+    dropoffTimeEstimate: '8:33 AM',
+    distanceKm: 18.4,
+    seats: 1,
+    durationMinutes: 18,
+    price: 4.2,
+    co2SavedKg: 0.58,
+    co2EstimateKg: 0.27,
+    confirmedPassengers: [],
+  },
+  {
+    id: '7',
+    driverId: CURRENT_USER_ID,
+    driverName: CURRENT_USER_NAME,
+    rating: 5,
+    ratingCount: 0,
+    pickup: 'Clayton Station',
+    destination: 'Monash Clayton Campus',
+    pickupLat: -37.9246,
+    pickupLng: 145.1206,
+    destinationLat: CLAYTON_LAT,
+    destinationLng: CLAYTON_LNG,
+    date: 'Thu, 14 Aug 2025',
+    departureTime: '9:00 AM',
+    dropoffTimeEstimate: '9:08 AM',
+    distanceKm: 6.2,
+    seats: 2,
+    durationMinutes: 8,
+    price: 2.5,
+    co2SavedKg: 0.4,
+    co2EstimateKg: 0.15,
+    confirmedPassengers: [],
+  },
 ];
 
 // Demo data: rides the current (demo) user has confirmed - what appears in My Rides > Upcoming.
 export const MY_UPCOMING_RIDES: MyRideBooking[] = [{ rideId: '1', dateLabel: 'Tomorrow' }];
+
+// Demo data: completed rides - what appears in My Rides > Past (each can be reviewed).
+export const MY_PAST_RIDES: MyRideBooking[] = [{ rideId: '5', dateLabel: 'Mon, 11 Aug' }];
+
+// The ride the current (demo) user is driving - shows under My Rides > Driving,
+// and is the ride the dummy passenger requests reference.
+export const MY_DRIVING_RIDES: MyRideBooking[] = [
+  { rideId: '6', dateLabel: 'Wed, 13 Aug' },
+  { rideId: '7', dateLabel: 'Thu, 14 Aug' },
+];

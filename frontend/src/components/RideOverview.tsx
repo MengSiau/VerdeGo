@@ -29,7 +29,9 @@ export function RideOverview({ ride, actions }: RideOverviewProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { styles, theme } = useThemedStyles(makeStyles);
-  const seatsLeft = ride.seats - ride.confirmedPassengers.length;
+  // ride.seats is already "seats still open" (the backend decrements it as bookings get
+  // accepted), not the vehicle's total capacity - don't subtract confirmedPassengers here.
+  const seatsLeft = ride.seats;
   const co2SavedKg = calculateCo2SavedKg(ride.distanceKm, ride.confirmedPassengers.length);
   const co2PotentialKg = calculateCo2SavedKg(ride.distanceKm, ride.seats);
   const origin = { latitude: ride.pickupLat, longitude: ride.pickupLng };
@@ -134,10 +136,7 @@ export function RideOverview({ ride, actions }: RideOverviewProps) {
             {ride.confirmedPassengers.map((passenger) => (
               <View key={passenger.name} style={styles.passengerRow}>
                 <Avatar name={passenger.name} size={36} />
-                <View style={styles.routeTextWrap}>
-                  <Text style={styles.passengerName}>{passenger.name}</Text>
-                  <Text style={styles.passengerPickup}>{passenger.pickup}</Text>
-                </View>
+                <Text style={styles.passengerName}>{passenger.name}</Text>
               </View>
             ))}
           </View>
@@ -334,12 +333,6 @@ const makeStyles = (t: Theme) =>
       fontSize: t.fontSize.sm,
       lineHeight: t.lineHeight(t.fontSize.sm),
       color: t.colors.text,
-    },
-    passengerPickup: {
-      fontFamily: fontFamily.bodyRegular,
-      fontSize: t.fontSize.xs,
-      lineHeight: t.lineHeight(t.fontSize.xs),
-      color: t.colors.textSecondary,
     },
     co2Section: {
       marginTop: 20,

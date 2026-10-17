@@ -6,6 +6,7 @@ import { fontFamily, radius } from "@/src/theme";
 import type { Theme } from "@/src/theme/useTheme";
 import { useThemedStyles } from "@/src/theme/useThemedStyles";
 import { calculateCo2SavedKg } from "@/src/utils/co2savings";
+import { formatJoinedPassengers } from "@/src/utils/formatPassengers";
 
 import { Avatar } from "./Avatar";
 import { Stars } from "./Stars";
@@ -68,6 +69,15 @@ export function RideCard({ ride, onPress }: RideCardProps) {
         </View>
         <Text style={styles.co2Text}>{co2Saved}kg by joining</Text>
       </View>
+
+      {ride.confirmedPassengers.length > 0 && (
+        <View style={styles.passengersRow}>
+          <Ionicons name="people-outline" size={14} color={theme.colors.textSecondary} />
+          <Text style={styles.passengersText}>
+            {formatJoinedPassengers(ride.confirmedPassengers.map((p) => p.name))} joined
+          </Text>
+        </View>
+      )}
     </Pressable>
   );
 }
@@ -119,7 +129,6 @@ const makeStyles = (t: Theme) =>
       width: 8,
       height: 8,
       borderRadius: radius.full,
-      // Amber reads on both white and dark surfaces; border gives it an edge in high contrast
       backgroundColor: t.colors.text,
       marginHorizontal: 4,
     },
@@ -174,5 +183,18 @@ const makeStyles = (t: Theme) =>
       fontSize: t.fontSize.xs,
       lineHeight: t.lineHeight(t.fontSize.xs),
       color: t.colors.brand,
+    },
+    passengersRow: {
+      marginTop: 8,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    passengersText: {
+      flex: 1,
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.textSecondary,
     },
   });

@@ -1,36 +1,46 @@
-import { Ionicons } from "@expo/vector-icons";
-import { useLocalSearchParams, useRouter } from "expo-router";
-import { StatusBar } from "expo-status-bar";
-import { ScrollView, StyleSheet, Text, View } from "react-native";
-import { useSafeAreaInsets } from "react-native-safe-area-context";
+import { Ionicons } from '@expo/vector-icons';
+import { useLocalSearchParams, useRouter } from 'expo-router';
+import { StatusBar } from 'expo-status-bar';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
-import { PrimaryButton } from "@/src/components/PrimaryButton";
-import { useRidesStore } from "@/src/data/RidesStore";
-import { fontFamily, radius, screenPaddingX } from "@/src/theme";
-import type { Theme } from "@/src/theme/useTheme";
-import { useThemedStyles } from "@/src/theme/useThemedStyles";
+import { PrimaryButton } from '@/src/components/PrimaryButton';
+import { useRideDetails } from '@/src/hooks/useRideDetails';
+import { fontFamily, radius, screenPaddingX } from '@/src/theme';
+import type { Theme } from '@/src/theme/useTheme';
+import { useThemedStyles } from '@/src/theme/useThemedStyles';
 
 export function RideRequestSent() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
   const { styles, theme } = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
-  const { rides } = useRidesStore();
-  const ride = rides.find((r) => r.id === id);
+  const { ride, loading, error, refresh } = useRideDetails(id);
 
-  if (!ride) {
+  if (loading && !ride) {
     return (
       <View style={styles.notFound}>
-        <Text style={styles.notFoundText}>Ride not found.</Text>
+        <ActivityIndicator size="large" color={theme.colors.brand} />
       </View>
     );
   }
 
-  const shortPickup = ride.pickup.replace(/ Station$/, "");
+  if (error || !ride) {
+    return (
+      <View style={styles.notFound}>
+        <Text style={styles.notFoundText}>{error ?? 'Ride not found.'}</Text>
+        <View style={styles.retryButton}>
+          <PrimaryButton label="Try Again" onPress={() => void refresh()} />
+        </View>
+      </View>
+    );
+  }
+
+  const shortPickup = ride.pickup.replace(/ Station$/, '');
 
   return (
     <View style={[styles.fill, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}>
-      <StatusBar style={theme.isDark ? "light" : "dark"} />
+      <StatusBar style={theme.isDark ? 'light' : 'dark'} />
       {/* ScrollView so the button can't be pushed off-screen at Large text */}
       <ScrollView
         style={styles.fill}
@@ -70,7 +80,7 @@ export function RideRequestSent() {
       </ScrollView>
 
       <View style={styles.actions}>
-        <PrimaryButton label="Back to Feed" onPress={() => router.push("/home")} />
+        <PrimaryButton label="Back to Feed" onPress={() => router.push('/home')} />
       </View>
     </View>
   );
@@ -85,8 +95,10 @@ const makeStyles = (t: Theme) =>
     },
     notFound: {
       flex: 1,
-      alignItems: "center",
-      justifyContent: "center",
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+      gap: 12,
       backgroundColor: t.colors.bg,
     },
     notFoundText: {
@@ -94,11 +106,15 @@ const makeStyles = (t: Theme) =>
       fontSize: t.fontSize.sm,
       lineHeight: t.lineHeight(t.fontSize.sm),
       color: t.colors.textSecondary,
+      textAlign: 'center',
+    },
+    retryButton: {
+      alignSelf: 'stretch',
     },
     content: {
       flexGrow: 1,
-      alignItems: "center",
-      justifyContent: "center",
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     iconHalo: {
       width: 140,
@@ -107,23 +123,23 @@ const makeStyles = (t: Theme) =>
       backgroundColor: t.colors.surface,
       borderWidth: 2,
       borderColor: t.colors.divider,
-      alignItems: "center",
-      justifyContent: "center",
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     iconCircle: {
       width: 80,
       height: 80,
       borderRadius: radius.full,
       backgroundColor: t.colors.brand,
-      alignItems: "center",
-      justifyContent: "center",
+      alignItems: 'center',
+      justifyContent: 'center',
     },
     title: {
       marginTop: 28,
-      textAlign: "center",
+      textAlign: 'center',
       fontFamily: fontFamily.headingBold,
-      fontSize: t.fontSize["2xl"],
-      lineHeight: t.lineHeight(t.fontSize["2xl"]),
+      fontSize: t.fontSize['2xl'],
+      lineHeight: t.lineHeight(t.fontSize['2xl']),
       color: t.colors.text,
     },
     subtitle: {
@@ -132,7 +148,7 @@ const makeStyles = (t: Theme) =>
       fontSize: t.fontSize.sm,
       lineHeight: t.lineHeight(t.fontSize.sm),
       color: t.colors.textSecondary,
-      textAlign: "center",
+      textAlign: 'center',
     },
     subtitleBold: {
       fontFamily: fontFamily.bodySemibold,
@@ -140,18 +156,18 @@ const makeStyles = (t: Theme) =>
     },
     summaryCard: {
       marginTop: 28,
-      width: "100%",
-      borderRadius: radius["2xl"],
+      width: '100%',
+      borderRadius: radius['2xl'],
       backgroundColor: t.colors.surface,
       borderWidth: 1,
       borderColor: t.colors.divider,
       padding: 16,
     },
     summaryRow: {
-      flexDirection: "row",
-      flexWrap: "wrap",
-      alignItems: "center",
-      justifyContent: "space-between",
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
       columnGap: 12,
       paddingVertical: 6,
     },
@@ -163,13 +179,13 @@ const makeStyles = (t: Theme) =>
     },
     summaryValue: {
       flexShrink: 1,
-      textAlign: "right",
+      textAlign: 'right',
       fontFamily: fontFamily.headingBold,
       fontSize: t.fontSize.sm,
       lineHeight: t.lineHeight(t.fontSize.sm),
       color: t.colors.text,
     },
     actions: {
-      width: "100%",
+      width: '100%',
     },
   });

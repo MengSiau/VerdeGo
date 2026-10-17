@@ -5,6 +5,7 @@ import type { Ride } from "@/src/data/rides";
 import { fontFamily, radius } from "@/src/theme";
 import type { Theme } from "@/src/theme/useTheme";
 import { useThemedStyles } from "@/src/theme/useThemedStyles";
+import { formatJoinedPassengers } from "@/src/utils/formatPassengers";
 
 import { Avatar } from "./Avatar";
 
@@ -13,12 +14,17 @@ type MyRideCardProps = {
   dateLabel: string;
   role: "driver" | "passenger";
   onPress?: () => void;
+  /** Past rides pass this to show a review action in place of "Tap to expand". */
+  onReview?: () => void;
+  reviewed?: boolean;
 };
 
 // TODO: swap the route preview strip for a real map once map integration exists.
-export function MyRideCard({ ride, dateLabel, role, onPress }: MyRideCardProps) {
+export function MyRideCard({ ride, dateLabel, role, onPress, onReview, reviewed }: MyRideCardProps) {
   const { styles, theme } = useThemedStyles(makeStyles);
-  const seatsLeft = ride.seats - ride.confirmedPassengers.length;
+  // ride.seats is already "seats still open" - the backend decrements it as bookings get
+  // accepted, so it's not the vehicle's total capacity.
+  const seatsLeft = ride.seats;
   const driverMeta =
     role === "driver"
       ? `${seatsLeft} seat${seatsLeft === 1 ? "" : "s"} left`
@@ -79,6 +85,15 @@ export function MyRideCard({ ride, dateLabel, role, onPress }: MyRideCardProps) 
           </Text>
         </View>
 
+        {ride.confirmedPassengers.length > 0 && (
+          <View style={styles.passengersRow}>
+            <Ionicons name="people-outline" size={14} color={theme.colors.textSecondary} />
+            <Text style={styles.passengersText}>
+              {formatJoinedPassengers(ride.confirmedPassengers.map((p) => p.name))} onboard
+            </Text>
+          </View>
+        )}
+
         <View style={styles.footerRow}>
           <View style={styles.co2Row}>
             <View style={styles.co2Icon}>
@@ -86,7 +101,20 @@ export function MyRideCard({ ride, dateLabel, role, onPress }: MyRideCardProps) 
             </View>
             <Text style={styles.co2Text}>{ride.co2EstimateKg.toFixed(2)} kg CO2</Text>
           </View>
-          <Text style={styles.expandText}>Tap to expand ›</Text>
+          {onReview ? (
+            reviewed ? (
+              <View style={styles.reviewedPill}>
+                <Ionicons name="checkmark-circle" size={14} color={theme.colors.brand} />
+                <Text style={styles.reviewedText}>Reviewed</Text>
+              </View>
+            ) : (
+              <Pressable onPress={onReview} style={styles.reviewButton} accessibilityRole="button">
+                <Text style={styles.reviewButtonText}>Leave a review</Text>
+              </Pressable>
+            )
+          ) : (
+            <Text style={styles.expandText}>Tap to expand ›</Text>
+          )}
         </View>
       </View>
     </Pressable>
@@ -96,7 +124,7 @@ export function MyRideCard({ ride, dateLabel, role, onPress }: MyRideCardProps) 
 const makeStyles = (t: Theme) =>
   StyleSheet.create({
     card: {
-      backgroundColor: t.colors.surface, 
+      backgroundColor: t.colors.surface,
       borderRadius: radius["2xl"],
       borderWidth: 1,
       borderColor: t.colors.divider,
@@ -221,6 +249,19 @@ const makeStyles = (t: Theme) =>
       lineHeight: t.lineHeight(t.fontSize.sm),
       color: t.colors.textSecondary,
     },
+    passengersRow: {
+      marginTop: 10,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+    },
+    passengersText: {
+      flex: 1,
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.textSecondary,
+    },
     footerRow: {
       marginTop: 12,
       flexDirection: "row",
@@ -250,6 +291,29 @@ const makeStyles = (t: Theme) =>
       color: t.colors.brand,
     },
     expandText: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.brand,
+    },
+    reviewButton: {
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: radius.full,
+      backgroundColor: t.colors.brand,
+    },
+    reviewButtonText: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.onBrand,
+    },
+    reviewedPill: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+    },
+    reviewedText: {
       fontFamily: fontFamily.headingSemibold,
       fontSize: t.fontSize.xs,
       lineHeight: t.lineHeight(t.fontSize.xs),

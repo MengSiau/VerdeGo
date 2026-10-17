@@ -20,11 +20,12 @@ import { SecondaryButton } from "@/src/components/SecondaryButton";
 import { SegmentedOptions } from "@/src/components/SegmentedOptions";
 import { TextField } from "@/src/components/TextField";
 import { ThemedSwitch } from "@/src/components/ThemedSwitch";
+import { useAuth } from "@/src/auth/AuthProvider";
 import { useUserDetailStore } from "@/src/data/UserDetailStore";
+import { useCurrentUser } from "@/src/hooks/useCurrentUser";
 import { colors, fontFamily, radius, screenPaddingX } from "@/src/theme";
 import type { Theme } from "@/src/theme/useTheme";
 import { useThemedStyles } from "@/src/theme/useThemedStyles";
-import { useAuth } from "@/src/auth/AuthProvider";
 
 export function Profile() {
   const insets = useSafeAreaInsets();
@@ -39,17 +40,20 @@ export function Profile() {
     setThemeMode,
     updateProfile,
   } = useUserDetailStore();
+  const { user: currentUser } = useCurrentUser();
 
-  // default to 'your name' if strings are empty
-  const fullName =
-    `${profile.firstName} ${profile.lastName}`.trim() || "Your Name";
+  // The real sign-up name lives on the backend (dev.users.name) - fall back to "Your Name"
+  // while it's loading or if the fetch fails.
+  const fullName = currentUser?.name.trim() || "Your Name";
 
-  // Same "first + last initial" derivation ProfileSetup uses for its avatar preview.
+  // First + last initial of the real name, same derivation ProfileSetup uses for its avatar preview.
   const initials = useMemo(() => {
-    const first = profile.firstName.trim().charAt(0);
-    const last = profile.lastName.trim().charAt(0);
-    return (first + last).toUpperCase() || "?";
-  }, [profile.firstName, profile.lastName]);
+    const parts = (currentUser?.name ?? "").trim().split(/\s+/).filter(Boolean);
+    if (parts.length === 0) return "?";
+    const first = parts[0].charAt(0);
+    const last = parts.length > 1 ? parts[parts.length - 1].charAt(0) : "";
+    return (first + last).toUpperCase();
+  }, [currentUser?.name]);
 
   const [isEditingName, setIsEditingName] = useState(false);
   const [draftPreferredName, setDraftPreferredName] = useState(
@@ -66,9 +70,10 @@ export function Profile() {
     setIsEditingName(false);
   };
 
-  const handleSignOut = async () => {
-    await signOut();
-    router.replace("/");
+  const handleSignOut = () => {
+    // No manual navigation needed - RootNavigator's own effect redirects to
+    // /login-signin as soon as the session clears.
+    void signOut();
   };
 
 
@@ -154,6 +159,16 @@ export function Profile() {
           </Card>
         </Section>
 
+        <Section title="Reviews">
+          <Card>
+            <AccountRow
+              icon="star-outline"
+              label="View your reviews"
+              onPress={() => router.push("/reviews")}
+            />
+          </Card>
+        </Section>
+
         <Section title="Notifications">
           <Card>
             <View style={styles.switchRow}>
@@ -221,6 +236,16 @@ export function Profile() {
                 onValueChange={toggleHighContrastMode}
               />
             </View>
+          </Card>
+        </Section>
+
+        <Section title="Developer">
+          <Card>
+            <AccountRow
+              icon="construct-outline"
+              label="Dev Settings"
+              onPress={() => router.push("/dev-settings")}
+            />
           </Card>
         </Section>
 

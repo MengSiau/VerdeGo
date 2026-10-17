@@ -8,9 +8,7 @@ import { SecondaryButton } from '@/src/components/SecondaryButton';
 import { useVehicles } from '@/src/data/VehiclesStore';
 import { getGreenScore } from '@/src/utils/greenScore';
 import { calculateRideEmissionsKg } from '@/src/utils/rideEmissions';
-import { fontFamily, radius, screenPaddingX } from '@/src/theme';
-import type { Theme } from '@/src/theme/useTheme';
-import { useThemedStyles } from '@/src/theme/useThemedStyles';
+import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
 import { usePostRideDraft } from '../PostRideContext';
 import { PostRideHeader } from '../PostRideHeader';
 import { useRoute } from '@/src/hooks/UseRoute';
@@ -20,7 +18,6 @@ import { useEffect } from 'react';
 export function PostVehicle() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
-  const { styles } = useThemedStyles(makeStyles);
   const { draft, updateDraft } = usePostRideDraft();
   const { vehicles, loading, error, refresh } = useVehicles();
 
@@ -60,7 +57,7 @@ export function PostVehicle() {
   const noUsableFactor =
     vehicle && (factor == null || !Number.isFinite(Number(factor)) || Number(factor) < 0);
 
-
+  
   return (
     <View style={styles.fill}>
       <PostRideHeader title="Vehicle & Green Score" step={3} />
@@ -114,7 +111,13 @@ export function PostVehicle() {
             </Text>
           )}
 
-          {origin && routeError && (
+          {origin && routeError === 'Routing is not configured' && (
+            <Text style={styles.subtitle}>
+              Google API key is not confiured. 
+            </Text>
+          )}
+
+          {origin && routeError && routeError !== 'Routing is not configured' && (
             <Text style={styles.subtitle}>
               Couldn&apos;t calculate the journey distance. Check your connection and try again.
             </Text>
@@ -152,66 +155,60 @@ export function PostVehicle() {
   );
 }
 
-const makeStyles = (t: Theme) =>
-  StyleSheet.create({
-    fill: {
-      flex: 1,
-      backgroundColor: t.colors.bg,
-    },
-    content: {
-      paddingHorizontal: screenPaddingX.standard,
-      paddingTop: 20,
-    },
-    subtitle: {
-      fontFamily: fontFamily.bodyRegular,
-      fontSize: t.fontSize.base,
-      lineHeight: t.lineHeight(t.fontSize.base),
-      color: t.colors.textSecondary,
-    },
-    fieldGroup: {
-      marginTop: 20,
-      gap: 12,
-    },
-    resultCard: {
-      marginTop: 20,
-      padding: 16,
-      borderRadius: radius['2xl'],
-      backgroundColor: t.colors.surface,
-      borderWidth: 1.5,
-      borderColor: t.colors.brand,
-    },
-    resultTitle: {
-      fontFamily: fontFamily.headingBold,
-      fontSize: t.fontSize.sm,
-      lineHeight: t.lineHeight(t.fontSize.sm),
-      color: t.colors.brand,
-    },
-    resultBody: {
-      marginTop: 16,
-      flexDirection: 'row',
-      alignItems: 'center',
-      gap: 16,
-    },
-    resultInfo: {
-      flex: 1,
-      gap: 2,
-    },
-    resultValue: {
-      fontFamily: fontFamily.headingBold,
-      fontSize: t.fontSize.xl,
-      lineHeight: t.lineHeight(t.fontSize.xl),
-      color: t.colors.text,
-    },
-    resultMeta: {
-      fontFamily: fontFamily.bodyRegular,
-      fontSize: t.fontSize.xs,
-      lineHeight: t.lineHeight(t.fontSize.xs),
-      color: t.colors.textSecondary,
-    },
-    actions: {
-      paddingHorizontal: screenPaddingX.standard,
-      paddingTop: 16,
-      paddingBottom: 24,
-      backgroundColor: t.colors.bg,
-    },
-  });
+const styles = StyleSheet.create({
+  fill: {
+    flex: 1,
+    backgroundColor: colors.neutral.white,
+  },
+  content: {
+    paddingHorizontal: screenPaddingX.standard,
+    paddingTop: 20,
+  },
+  subtitle: {
+    fontFamily: fontFamily.bodyRegular,
+    fontSize: fontSize.base,
+    color: colors.neutral.gray500,
+    lineHeight: 22,
+  },
+  fieldGroup: {
+    marginTop: 20,
+    gap: 12,
+  },
+  resultCard: {
+    marginTop: 20,
+    padding: 16,
+    borderRadius: radius['2xl'],
+    backgroundColor: colors.brand.verde50,
+  },
+
+  resultTitle: {
+    fontFamily: fontFamily.headingBold,
+    fontSize: fontSize.sm,
+    color: colors.brand.verde700,
+  },
+  resultBody: {
+    marginTop: 16,
+    flexDirection: 'row',
+    alignItems: 'center',
+    gap: 16,
+  },
+  resultInfo: {
+    flex: 1,
+    gap: 2,
+  },
+  resultValue: {
+    fontFamily: fontFamily.headingBold,
+    fontSize: fontSize.xl,
+    color: colors.neutral.gray900,
+  },
+  resultMeta: {
+    fontFamily: fontFamily.bodyRegular,
+    fontSize: fontSize.xs,
+    color: colors.neutral.gray500,
+  },
+  actions: {
+    paddingHorizontal: screenPaddingX.standard,
+    paddingTop: 16,
+    paddingBottom: 24,
+  },
+});

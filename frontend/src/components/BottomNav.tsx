@@ -11,7 +11,6 @@ export type BottomNavTab = "feed" | "myRides" | "requests" | "profile";
 
 type NavIconName = "home" | "car" | "notifications" | "person";
 
-// TODO: wire Requests once that screen exists.
 export function BottomNav({ active }: { active: BottomNavTab }) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
@@ -43,6 +42,7 @@ export function BottomNav({ active }: { active: BottomNavTab }) {
         icon="notifications"
         label="Requests"
         isActive={active === "requests"}
+        onPress={() => router.replace("/requests")}
       />
       <NavItem
         icon="person"

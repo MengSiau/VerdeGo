@@ -17,6 +17,8 @@ type SecondaryButtonProps = {
    * 'accent'      = brand outline and text - e.g. Calculate Green Score.
    */
   variant?: SecondaryButtonVariant;
+  /** Blocks presses and dims the button. Used for in-progress async actions. */
+  disabled?: boolean;
 };
 
 // Standard app-wide secondary/outline button: surface bg, border-2.
@@ -25,6 +27,7 @@ export function SecondaryButton({
   icon,
   onPress,
   variant = "default",
+  disabled = false,
 }: SecondaryButtonProps) {
   const { styles, theme } = useThemedStyles(makeStyles);
 
@@ -37,12 +40,15 @@ export function SecondaryButton({
   return (
     <Pressable
       onPress={onPress}
+      disabled={disabled}
       accessibilityRole="button"
       accessibilityLabel={label}
+      accessibilityState={{ disabled }}
       style={({ pressed }) => [
         styles.button,
         { borderColor: variantColors.border },
-        pressed && styles.pressed,
+        pressed && !disabled && styles.pressed,
+        disabled && styles.disabled,
       ]}
     >
       <View style={styles.content}>
@@ -72,6 +78,9 @@ const makeStyles = (t: Theme) =>
     },
     pressed: {
       opacity: 0.7,
+    },
+    disabled: {
+      opacity: 0.5,
     },
     content: {
       flexDirection: "row",
