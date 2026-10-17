@@ -3,9 +3,8 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, Button, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { useAuth } from '@/src/auth/AuthProvider';
 import { BottomNav } from '@/src/components/BottomNav';
 import { FilterChips } from '@/src/components/FilterChips';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
@@ -27,7 +26,6 @@ export function Home() {
   const router = useRouter();
   const { rides, loading, error, refresh } = useBrowseRides();
   const [sort, setSort] = useState<SortFilter>('eco');
-  const { signOut } = useAuth();
 
   // The backend's GET /api/rides already excludes the caller's own vehicles, so no
   // client-side filtering is needed here (unlike the old local demo data).
@@ -69,7 +67,6 @@ export function Home() {
             {rides.length} rides available · sorted by {SORT_LABEL[sort]}
           </Text>
         </View>
-        <Button title="Temp Sign Out" onPress={signOut} />
 
         {loading && rides.length === 0 ? (
           <View style={styles.centeredState}>

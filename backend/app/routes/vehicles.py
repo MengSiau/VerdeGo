@@ -79,7 +79,11 @@ def get_vehicle_makes():
         current_app.logger.exception("Unable to load vehicle makes")
         return jsonify({"error": "Unable to load vehicle makes"}), 500
 
+'''
+The function retrieves emission data for vehcile models based on provided model ID and optional parameters.
 
+Usage: The vehicle emissions estimation screen, where users can get their emissions data.
+'''
 @vehicles_bp.route("/models/<uuid:model_id>/emissions", methods=["POST"])
 def get_model_emissions(model_id):
     if not get_authenticated_user():
