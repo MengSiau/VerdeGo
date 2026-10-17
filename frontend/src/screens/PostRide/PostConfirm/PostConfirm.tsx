@@ -14,7 +14,9 @@ import { CURRENT_USER_ID, CURRENT_USER_NAME } from '@/src/data/currentUser';
 import { useRidesStore } from '@/src/data/RidesStore';
 import type { Ride } from '@/src/data/rides';
 import { useRoute } from '@/src/hooks/UseRoute';
-import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
+import { fontFamily, radius, screenPaddingX } from '@/src/theme';
+import type { Theme } from '@/src/theme/useTheme';
+import { useThemedStyles } from '@/src/theme/useThemedStyles';
 
 import { calculateFinalFarePerPassenger } from '../fareCalculator';
 import { usePostRideDraft } from '../PostRideContext';
@@ -54,12 +56,13 @@ function toFullDateDisplay(shortDate: string | undefined) {
   const [dow, rest] = shortDate.split(', ');
   const [month, day] = rest?.split(' ') ?? [];
   if (!dow || !month || !day) return fallback;
-    return `${dow}, ${day} ${month} ${new Date().getFullYear()}`;;
+  return `${dow}, ${day} ${month} ${new Date().getFullYear()}`;
 }
 
 export function PostConfirm() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { styles, theme } = useThemedStyles(makeStyles);
   const { draft } = usePostRideDraft();
   const { postRide } = useRidesStore();
 
@@ -175,7 +178,7 @@ export function PostConfirm() {
 
   return (
     <View style={[styles.fill, { paddingTop: insets.top + 16, paddingBottom: insets.bottom + 16 }]}>
-      <StatusBar style="dark" />
+      <StatusBar style={theme.isDark ? 'light' : 'dark'} />
       <View style={styles.header}>
         <Pressable
           onPress={() => router.back()}
@@ -183,7 +186,7 @@ export function PostConfirm() {
           style={styles.backButton}
           accessibilityLabel="Go back"
           accessibilityRole="button">
-          <Ionicons name="chevron-back" size={24} color={colors.neutral.gray900} />
+          <Ionicons name="chevron-back" size={24} color={theme.colors.text} />
         </Pressable>
         <Text style={styles.title}>Review & Post</Text>
       </View>
@@ -242,6 +245,7 @@ export function PostConfirm() {
 }
 
 function SummaryRow({ label, value, last }: { label: string; value: string; last?: boolean }) {
+  const { styles } = useThemedStyles(makeStyles);
   return (
     <View style={[styles.row, !last && styles.rowDivider]}>
       <Text style={styles.rowLabel}>{label}</Text>
@@ -250,81 +254,92 @@ function SummaryRow({ label, value, last }: { label: string; value: string; last
   );
 }
 
-const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
-    backgroundColor: colors.neutral.white,
-    paddingHorizontal: screenPaddingX.standard,
-  },
-  header: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    marginLeft: -10,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.xl,
-    color: colors.neutral.gray900,
-  },
-  summaryCard: {
-    marginTop: 20,
-    borderRadius: radius['2xl'],
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1,
-    borderColor: colors.neutral.gray100,
-    overflow: 'hidden',
-  },
-  rows: {
-    padding: 16,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 12,
-  },
-  rowDivider: {
-    borderBottomWidth: 1,
-    borderBottomColor: colors.neutral.gray100,
-  },
-  rowLabel: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray500,
-  },
-  rowValue: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray900,
-  },
-  termsBox: {
-    marginTop: 16,
-    padding: 16,
-    borderRadius: radius['2xl'],
-    backgroundColor: colors.neutral.gray50,
-  },
-  termsText: {
-    textAlign: 'center',
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray500,
-    lineHeight: 20,
-  },
-  termsLink: {
-    fontFamily: fontFamily.headingSemibold,
-    color: colors.brand.verde600,
-  },
-  actions: {
-    marginTop: 16,
-  },
-  actionGap: {
-    height: 12,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    fill: {
+      flex: 1,
+      backgroundColor: t.colors.bg,
+      paddingHorizontal: screenPaddingX.standard,
+    },
+    header: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+    },
+    backButton: {
+      width: 44,
+      height: 44,
+      marginLeft: -10,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    title: {
+      flex: 1,
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.xl,
+      lineHeight: t.lineHeight(t.fontSize.xl),
+      color: t.colors.text,
+    },
+    summaryCard: {
+      marginTop: 20,
+      borderRadius: radius['2xl'],
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.divider,
+      overflow: 'hidden',
+    },
+    rows: {
+      padding: 16,
+    },
+    row: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      columnGap: 12,
+      paddingVertical: 12,
+    },
+    rowDivider: {
+      borderBottomWidth: 1,
+      borderBottomColor: t.colors.divider,
+    },
+    rowLabel: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+    },
+    rowValue: {
+      flexShrink: 1,
+      textAlign: 'right',
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.text,
+    },
+    termsBox: {
+      marginTop: 16,
+      padding: 16,
+      borderRadius: radius['2xl'],
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.divider,
+    },
+    termsText: {
+      textAlign: 'center',
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+    },
+    termsLink: {
+      fontFamily: fontFamily.headingSemibold,
+      color: t.colors.brand,
+    },
+    actions: {
+      marginTop: 16,
+    },
+    actionGap: {
+      height: 12,
+    },
+  });

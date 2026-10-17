@@ -28,7 +28,8 @@ export function Avatar({ name, size = 36 }: AvatarProps) {
         styles.circle,
         { width: size, height: size, borderRadius: size / 2, backgroundColor: palette.bg },
       ]}>
-      <Text style={[styles.initials, { fontSize: size * 0.4, color: palette.text }]}>
+      <Text maxFontSizeMultiplier={1} 
+      style={[styles.initials, { fontSize: size * 0.4, color: palette.text }]}>
         {getInitials(name)}
       </Text>
     </View>

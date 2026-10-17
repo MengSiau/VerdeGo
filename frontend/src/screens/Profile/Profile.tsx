@@ -24,10 +24,12 @@ import { useUserDetailStore } from "@/src/data/UserDetailStore";
 import { colors, fontFamily, radius, screenPaddingX } from "@/src/theme";
 import type { Theme } from "@/src/theme/useTheme";
 import { useThemedStyles } from "@/src/theme/useThemedStyles";
+import { useAuth } from "@/src/auth/AuthProvider";
 
 export function Profile() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { signOut } = useAuth();
   const { styles, theme } = useThemedStyles(makeStyles);
   const {
     profile,
@@ -64,9 +66,12 @@ export function Profile() {
     setIsEditingName(false);
   };
 
-  const handleSignOut = () => {
+  const handleSignOut = async () => {
+    await signOut();
     router.replace("/");
   };
+
+
 
   return (
     <View style={styles.fill}>
