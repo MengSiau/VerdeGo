@@ -1,23 +1,26 @@
 import { Ionicons } from '@expo/vector-icons';
 import { useLocalSearchParams, useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
-import { ActivityIndicator, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, ScrollView, StyleSheet, Text, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { useRideDetails } from '@/src/hooks/useRideDetails';
-import { colors, fontFamily, fontSize, radius, screenPaddingX } from '@/src/theme';
+import { fontFamily, radius, screenPaddingX } from '@/src/theme';
+import type { Theme } from '@/src/theme/useTheme';
+import { useThemedStyles } from '@/src/theme/useThemedStyles';
 
 export function RideRequestSent() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { styles, theme } = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { ride, loading, error, refresh } = useRideDetails(id);
 
   if (loading && !ride) {
     return (
       <View style={styles.notFound}>
-        <ActivityIndicator size="large" color={colors.brand.verde600} />
+        <ActivityIndicator size="large" color={theme.colors.brand} />
       </View>
     );
   }
@@ -37,18 +40,23 @@ export function RideRequestSent() {
 
   return (
     <View style={[styles.fill, { paddingTop: insets.top + 20, paddingBottom: insets.bottom + 24 }]}>
-      <StatusBar style="dark" />
-      <View style={styles.content}>
+      <StatusBar style={theme.isDark ? 'light' : 'dark'} />
+      {/* ScrollView so the button can't be pushed off-screen at Large text */}
+      <ScrollView
+        style={styles.fill}
+        contentContainerStyle={styles.content}
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.iconHalo}>
           <View style={styles.iconCircle}>
-            <Ionicons name="checkmark" size={36} color={colors.neutral.white} />
+            <Ionicons name="checkmark" size={36} color={theme.colors.onBrand} />
           </View>
         </View>
 
         <Text style={styles.title}>Request Sent!</Text>
         <Text style={styles.subtitle}>
           Your request has been sent to <Text style={styles.subtitleBold}>{ride.driverName}</Text>.
-          You&apos;ll receive a notification once she accepts.
+          You&apos;ll receive a notification once they accept.
         </Text>
 
         <View style={styles.summaryCard}>
@@ -69,7 +77,7 @@ export function RideRequestSent() {
             <Text style={styles.summaryValue}>${ride.price.toFixed(2)}</Text>
           </View>
         </View>
-      </View>
+      </ScrollView>
 
       <View style={styles.actions}>
         <PrimaryButton label="Back to Feed" onPress={() => router.push('/home')} />
@@ -78,91 +86,106 @@ export function RideRequestSent() {
   );
 }
 
-const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
-    backgroundColor: colors.neutral.white,
-    paddingHorizontal: screenPaddingX.standard,
-  },
-  notFound: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    gap: 12,
-  },
-  notFoundText: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray500,
-    textAlign: 'center',
-  },
-  retryButton: {
-    alignSelf: 'stretch',
-  },
-  content: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconHalo: {
-    width: 140,
-    height: 140,
-    borderRadius: radius.full,
-    backgroundColor: colors.brand.verde50,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  iconCircle: {
-    width: 80,
-    height: 80,
-    borderRadius: radius.full,
-    backgroundColor: colors.brand.verde500,
-    alignItems: 'center',
-    justifyContent: 'center',
-  },
-  title: {
-    marginTop: 28,
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize['2xl'],
-    color: colors.neutral.gray900,
-  },
-  subtitle: {
-    marginTop: 12,
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray500,
-    textAlign: 'center',
-    lineHeight: 20,
-  },
-  subtitleBold: {
-    fontFamily: fontFamily.bodySemibold,
-    color: colors.neutral.gray700,
-  },
-  summaryCard: {
-    marginTop: 28,
-    width: '100%',
-    borderRadius: radius['2xl'],
-    backgroundColor: colors.neutral.gray50,
-    padding: 16,
-  },
-  summaryRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-    paddingVertical: 6,
-  },
-  summaryLabel: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray500,
-  },
-  summaryValue: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray900,
-  },
-  actions: {
-    width: '100%',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    fill: {
+      flex: 1,
+      backgroundColor: t.colors.bg,
+      paddingHorizontal: screenPaddingX.standard,
+    },
+    notFound: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+      gap: 12,
+      backgroundColor: t.colors.bg,
+    },
+    notFoundText: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+      textAlign: 'center',
+    },
+    retryButton: {
+      alignSelf: 'stretch',
+    },
+    content: {
+      flexGrow: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconHalo: {
+      width: 140,
+      height: 140,
+      borderRadius: radius.full,
+      backgroundColor: t.colors.surface,
+      borderWidth: 2,
+      borderColor: t.colors.divider,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    iconCircle: {
+      width: 80,
+      height: 80,
+      borderRadius: radius.full,
+      backgroundColor: t.colors.brand,
+      alignItems: 'center',
+      justifyContent: 'center',
+    },
+    title: {
+      marginTop: 28,
+      textAlign: 'center',
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize['2xl'],
+      lineHeight: t.lineHeight(t.fontSize['2xl']),
+      color: t.colors.text,
+    },
+    subtitle: {
+      marginTop: 12,
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+      textAlign: 'center',
+    },
+    subtitleBold: {
+      fontFamily: fontFamily.bodySemibold,
+      color: t.colors.text,
+    },
+    summaryCard: {
+      marginTop: 28,
+      width: '100%',
+      borderRadius: radius['2xl'],
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.divider,
+      padding: 16,
+    },
+    summaryRow: {
+      flexDirection: 'row',
+      flexWrap: 'wrap',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      columnGap: 12,
+      paddingVertical: 6,
+    },
+    summaryLabel: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+    },
+    summaryValue: {
+      flexShrink: 1,
+      textAlign: 'right',
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.text,
+    },
+    actions: {
+      width: '100%',
+    },
+  });

@@ -1,68 +1,65 @@
 import type { ReactNode } from 'react';
 import { StyleSheet, Text, View } from 'react-native';
 
-import { colors, fontFamily, fontSize, radius } from '@/src/theme';
+import { fontFamily, radius } from '@/src/theme';
+import type { Theme } from '@/src/theme/useTheme';
+import { useThemedStyles } from '@/src/theme/useThemedStyles';
 
 type CalloutVariant = 'info' | 'warning' | 'danger';
 
 type CalloutBannerProps = {
   variant: CalloutVariant;
+  /** Pass an icon coloured to match the variant (brand / accent / danger from useTheme). */
   icon: ReactNode;
   heading: string;
   body: string;
 };
 
-const variantStyles: Record<CalloutVariant, { background: string; heading: string; body: string }> = {
-  info: {
-    background: colors.brand.verde50,
-    heading: colors.brand.verde700,
-    body: colors.brand.verde600,
-  },
-  warning: {
-    background: '#fffbeb',
-    heading: '#b45309',
-    body: colors.accent.amber500,
-  },
-  danger: {
-    background: '#fef2f2',
-    heading: colors.semantic.danger,
-    body: colors.semantic.dangerLight,
-  },
-};
-
 export function CalloutBanner({ variant, icon, heading, body }: CalloutBannerProps) {
-  const palette = variantStyles[variant];
+  const { styles, theme } = useThemedStyles(makeStyles);
+
+  const accent = {
+    info: theme.colors.brand,
+    warning: theme.colors.accent,
+    danger: theme.colors.danger,
+  }[variant];
 
   return (
-    <View style={[styles.container, { backgroundColor: palette.background }]}>
+    <View style={[styles.container, { borderColor: accent }]}>
       {icon}
       <View style={styles.textColumn}>
-        <Text style={[styles.heading, { color: palette.heading }]}>{heading}</Text>
-        <Text style={[styles.body, { color: palette.body }]}>{body}</Text>
+        <Text style={[styles.heading, { color: accent }]}>{heading}</Text>
+        <Text style={styles.body}>{body}</Text>
       </View>
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  container: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-    borderRadius: radius['2xl'],
-    padding: 16,
-  },
-  textColumn: {
-    flex: 1,
-  },
-  heading: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.sm,
-  },
-  body: {
-    marginTop: 2,
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    lineHeight: 20,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    container: {
+      flexDirection: 'row',
+      alignItems: 'flex-start',
+      gap: 12,
+      borderRadius: radius['2xl'],
+      padding: 16,
+      // surface + coloured outline replaces the pale tinted backgrounds
+      backgroundColor: t.colors.surface,
+      borderWidth: 1.5,
+    },
+    textColumn: {
+      flex: 1,
+    },
+    heading: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+    },
+    body: {
+      marginTop: 2,
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+    },
+  });

@@ -1,17 +1,25 @@
-import { StyleSheet, Text, TextInput, View, type TextInputProps } from 'react-native';
+import { StyleSheet, Text, TextInput, View, type TextInputProps } from "react-native";
 
-import { colors, fontFamily, fontSize, radius, tapTarget } from '@/src/theme';
+import { fontFamily, radius, tapTarget } from "@/src/theme";
+import type { Theme } from "@/src/theme/useTheme";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 type TextFieldProps = TextInputProps & {
   label: string;
 };
 
 export function TextField({ label, style, ...inputProps }: TextFieldProps) {
+  const { styles, theme } = useThemedStyles(makeStyles);
+
   return (
     <View>
-      <Text style={styles.label}>{label}</Text>
+      <Text style={styles.label} maxFontSizeMultiplier={1.6}>
+        {label}
+      </Text>
       <TextInput
-        placeholderTextColor={colors.neutral.gray400}
+        accessibilityLabel={label}
+        placeholderTextColor={theme.colors.muted}
+        maxFontSizeMultiplier={1.6}
         style={[styles.input, style]}
         {...inputProps}
       />
@@ -19,22 +27,25 @@ export function TextField({ label, style, ...inputProps }: TextFieldProps) {
   );
 }
 
-const styles = StyleSheet.create({
-  label: {
-    marginBottom: 8,
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray700,
-  },
-  input: {
-    minHeight: tapTarget.inputHeight,
-    borderWidth: 2,
-    borderColor: colors.neutral.gray200,
-    borderRadius: radius.xl,
-    paddingHorizontal: 16,
-    paddingVertical: 14,
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray800,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    label: {
+      marginBottom: 8,
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.text,
+    },
+    input: {
+      minHeight: tapTarget.inputHeight,
+      borderWidth: 2,
+      borderColor: t.colors.border,
+      borderRadius: radius.xl,
+      paddingHorizontal: 16,
+      paddingVertical: 14,
+      backgroundColor: t.colors.surface,
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      color: t.colors.text,
+    },
+  });

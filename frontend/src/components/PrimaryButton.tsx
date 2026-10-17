@@ -1,76 +1,84 @@
-import { LinearGradient } from 'expo-linear-gradient';
-import { Pressable, StyleSheet, Text, type GestureResponderEvent, View } from 'react-native';
-import type { ReactNode } from 'react';
+import { Pressable, StyleSheet, Text, View, type GestureResponderEvent } from "react-native";
+import type { ReactNode } from "react";
 
-import { colors, fontFamily, fontSize, gradients, radius, tapTarget } from '@/src/theme';
+import { fontFamily, radius, tapTarget } from "@/src/theme";
+import type { Theme } from "@/src/theme/useTheme";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 type PrimaryButtonProps = {
   label: string;
   onPress?: (event: GestureResponderEvent) => void;
   icon?: ReactNode;
-  /** Blocks presses and dims the button used for in progress async actions. */
+  /** Blocks presses and dims the button. Used for in-progress async actions. */
   disabled?: boolean;
 };
 
-// Standard app-wide primary CTA: gradients.primaryCTA background, full-width, 56px min height.
+// Standard app-wide primary CTA: solid brand colour, full-width, min height from tapTarget.
 export function PrimaryButton({ label, onPress, icon, disabled = false }: PrimaryButtonProps) {
-  if (disabled) {
-    return (
-      <View style={[styles.button, styles.disabledButton]}>
-        <Text style={[styles.label, styles.disabledLabel]}>{label}</Text>
-      </View>
-    );
-  }
+  const { styles } = useThemedStyles(makeStyles);
+
   return (
-    <Pressable onPress={onPress} disabled={disabled} style={({ pressed }) => [pressed && !disabled && styles.pressed, disabled && styles.disabled]}>
-      <LinearGradient
-        colors={gradients.primaryCTA}
-        start={{ x: 0, y: 0 }}
-        end={{ x: 1, y: 1 }}
-        style={styles.button}>
-        <View style={styles.content}>
-          {icon}
-          <Text style={styles.label}>{label}</Text>
-        </View>
-      </LinearGradient>
+    <Pressable
+      onPress={onPress}
+      disabled={disabled}
+      accessibilityRole="button"
+      accessibilityLabel={label}
+      accessibilityState={{ disabled }}
+      style={({ pressed }) => [
+        styles.button,
+        pressed && !disabled && styles.pressed,
+        disabled && styles.disabled,
+      ]}
+    >
+      <View style={styles.content}>
+        {icon}
+        <Text style={styles.label} maxFontSizeMultiplier={1.6}>
+          {label}
+        </Text>
+      </View>
     </Pressable>
   );
 }
 
-const styles = StyleSheet.create({
-  button: {
-    minHeight: tapTarget.primaryButtonHeight,
-    borderRadius: radius['2xl'],
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.neutral.charcoal,
-    shadowOffset: { width: 0, height: 4 },
-    shadowOpacity: 0.15,
-    shadowRadius: 8,
-    elevation: 4,
-  },
-  pressed: {
-    opacity: 0.85,
-  },
-  label: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.base,
-    color: colors.neutral.white,
-  },
-    disabledButton: {
-    backgroundColor: '#d1fae5',
-    shadowOpacity: 0,
-    elevation: 0,
-  },
-  disabledLabel: {
-    color: '#6ee7b7',
-  },
-  content: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-},
-  disabled: {
-    opacity: 0.6,
-},
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    button: {
+      minHeight: tapTarget.primaryButtonHeight,
+      paddingVertical: 12,
+      paddingHorizontal: 16,
+      borderRadius: radius["2xl"],
+      backgroundColor: t.colors.brand,
+      // Outline keeps the button visible in high contrast (esp. green on black)
+      borderWidth: 2,
+      borderColor: t.colors.brand,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 4 },
+      shadowOpacity: 0.15,
+      shadowRadius: 8,
+      elevation: 4,
+    },
+    pressed: {
+      opacity: 0.85,
+    },
+    disabled: {
+      opacity: 0.5,
+      shadowOpacity: 0,
+      elevation: 0,
+    },
+    content: {
+      flexDirection: "row",
+      alignItems: "center",
+      justifyContent: "center",
+      gap: 8,
+    },
+    label: {
+      flexShrink: 1,
+      textAlign: "center",
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.base,
+      lineHeight: t.lineHeight(t.fontSize.base),
+      color: t.colors.onBrand,
+    },
+  });

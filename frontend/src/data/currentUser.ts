@@ -5,6 +5,7 @@ export const CURRENT_USER_NAME = "You";
 
 import type { GreenScoreGrade } from "@/src/screens/PostRide/PostRideContext";
 export type TextSizePreference = "normal" | "large";
+export type ThemeMode = "light" | "dark";
 
 export type UserProfile = {
   firstName: string; //assume like Monash and have first + middle together
@@ -18,6 +19,7 @@ export type UserProfile = {
   notificationEnabled: boolean; //notification section on figma mockup
   prefTextSize: TextSizePreference;
   contrast: boolean;
+  themeMode: ThemeMode;
 };
 
 //create blank default
@@ -31,6 +33,7 @@ export const DEFAULT_USER_PROFILE: UserProfile = {
   totalRides: 0,
   userGreenScore: "C",
   notificationEnabled: true,
-  prefTextSize: "normal",
+  prefTextSize: "normal", //default to normal text size 
   contrast: false,
+  themeMode: "light", //set default to light mode
 };

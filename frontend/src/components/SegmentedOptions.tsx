@@ -1,6 +1,8 @@
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, fontFamily, fontSize, radius } from '@/src/theme';
+import { fontFamily, radius } from "@/src/theme";
+import type { Theme } from "@/src/theme/useTheme";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 type SegmentedOptionsProps<T extends string> = {
   options: { label: string; value: T }[];
@@ -10,17 +12,30 @@ type SegmentedOptionsProps<T extends string> = {
 
 // Equal-width rounded-xl option chips, individually bordered (not a single continuous track) -
 // e.g. fuel type picker, role/tab pickers with more than 2-3 options.
-export function SegmentedOptions<T extends string>({ options, value, onChange }: SegmentedOptionsProps<T>) {
+export function SegmentedOptions<T extends string>({
+  options,
+  value,
+  onChange,
+}: SegmentedOptionsProps<T>) {
+  const { styles } = useThemedStyles(makeStyles);
+
   return (
-    <View style={styles.row}>
+    <View style={styles.row} accessibilityRole="radiogroup">
       {options.map((option) => {
         const active = option.value === value;
         return (
           <Pressable
             key={option.value}
             onPress={() => onChange(option.value)}
-            style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}>
-            <Text style={[styles.label, active ? styles.labelActive : styles.labelInactive]}>
+            accessibilityRole="radio"
+            accessibilityLabel={option.label}
+            accessibilityState={{ selected: active, checked: active }}
+            style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}
+          >
+            <Text
+              style={[styles.label, active ? styles.labelActive : styles.labelInactive]}
+              maxFontSizeMultiplier={1.6}
+            >
               {option.label}
             </Text>
           </Pressable>
@@ -30,34 +45,41 @@ export function SegmentedOptions<T extends string>({ options, value, onChange }:
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  chip: {
-    flex: 1,
-    minHeight: 44,
-    alignItems: 'center',
-    justifyContent: 'center',
-    borderRadius: radius.xl,
-  },
-  chipActive: {
-    backgroundColor: colors.brand.verde500,
-  },
-  chipInactive: {
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1.5,
-    borderColor: colors.neutral.gray200,
-  },
-  label: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.sm,
-  },
-  labelActive: {
-    color: colors.neutral.white,
-  },
-  labelInactive: {
-    color: colors.neutral.gray600,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      gap: 10,
+    },
+    chip: {
+      flex: 1,
+      minHeight: 44,
+      paddingVertical: 8,
+      paddingHorizontal: 8,
+      alignItems: "center",
+      justifyContent: "center",
+      borderRadius: radius.xl,
+      // Same border width on both states so the chips don't shift size when selected
+      borderWidth: 1.5,
+    },
+    chipActive: {
+      backgroundColor: t.colors.brand,
+      borderColor: t.colors.brand,
+    },
+    chipInactive: {
+      backgroundColor: t.colors.surface,
+      borderColor: t.colors.border,
+    },
+    label: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      textAlign: "center",
+    },
+    labelActive: {
+      color: t.colors.onBrand,
+    },
+    labelInactive: {
+      color: t.colors.textSecondary,
+    },
+  });

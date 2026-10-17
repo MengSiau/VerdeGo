@@ -8,7 +8,9 @@ import { RideOverview } from '@/src/components/RideOverview';
 import { SecondaryButton } from '@/src/components/SecondaryButton';
 import { useCurrentUser } from '@/src/hooks/useCurrentUser';
 import { useRideDetails } from '@/src/hooks/useRideDetails';
-import { colors, fontFamily, fontSize } from '@/src/theme';
+import { fontFamily } from '@/src/theme';
+import type { Theme } from '@/src/theme/useTheme';
+import { useThemedStyles } from '@/src/theme/useThemedStyles';
 
 import { CancelRideModal } from './CancelRideModal';
 
@@ -16,6 +18,7 @@ import { CancelRideModal } from './CancelRideModal';
 // joined is expected to diverge further from a ride you're just browsing.
 export function MyRideDetails() {
   const router = useRouter();
+  const { styles, theme } = useThemedStyles(makeStyles);
   const { id } = useLocalSearchParams<{ id: string }>();
   const { ride, loading, error, refresh } = useRideDetails(id);
   const { user: currentUser } = useCurrentUser();
@@ -25,7 +28,7 @@ export function MyRideDetails() {
   if (loading && !ride) {
     return (
       <View style={styles.notFound}>
-        <ActivityIndicator size="large" color={colors.brand.verde600} />
+        <ActivityIndicator size="large" color={theme.colors.brand} />
       </View>
     );
   }
@@ -86,21 +89,24 @@ export function MyRideDetails() {
   );
 }
 
-const styles = StyleSheet.create({
-  notFound: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: 24,
-    gap: 12,
-  },
-  notFoundText: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray500,
-    textAlign: 'center',
-  },
-  retryButton: {
-    alignSelf: 'stretch',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    notFound: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: 24,
+      gap: 12,
+      backgroundColor: t.colors.bg,
+    },
+    notFoundText: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+      textAlign: 'center',
+    },
+    retryButton: {
+      alignSelf: 'stretch',
+    },
+  });

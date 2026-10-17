@@ -1,21 +1,22 @@
-import { Ionicons } from '@expo/vector-icons';
-import { useRouter } from 'expo-router';
-import { StatusBar } from 'expo-status-bar';
-import type { ReactNode } from 'react';
-import { Pressable, ScrollView, StyleSheet, Text, View } from 'react-native';
-import { useSafeAreaInsets } from 'react-native-safe-area-context';
-import { calculateCo2SavedKg } from '@/src/utils/co2savings';
+import { Ionicons } from "@expo/vector-icons";
+import { useRouter } from "expo-router";
+import { StatusBar } from "expo-status-bar";
+import type { ReactNode } from "react";
+import { Pressable, ScrollView, StyleSheet, Text, View } from "react-native";
+import { useSafeAreaInsets } from "react-native-safe-area-context";
 
-import type { Ride } from '@/src/data/rides';
-import { colors, fontFamily, fontSize, mapBg, radius, screenPaddingX } from '@/src/theme';
+import type { Ride } from "@/src/data/rides";
+import { useRoute } from "@/src/hooks/UseRoute";
+import { fontFamily, radius, screenPaddingX } from "@/src/theme";
+import type { Theme } from "@/src/theme/useTheme";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
+import { calculateCo2SavedKg } from "@/src/utils/co2savings";
 
-import { Avatar } from './Avatar';
-import { CalloutBanner } from './CalloutBanner';
-import { StatTile } from './StatTile';
-import { Stars } from './Stars';
-
-import { RideRouteMap } from './RideRouteMap';
-import { useRoute } from '@/src/hooks/UseRoute';
+import { Avatar } from "./Avatar";
+import { CalloutBanner } from "./CalloutBanner";
+import { RideRouteMap } from "./RideRouteMap";
+import { StatTile } from "./StatTile";
+import { Stars } from "./Stars";
 
 type RideOverviewProps = {
   ride: Ride;
@@ -27,6 +28,7 @@ type RideOverviewProps = {
 export function RideOverview({ ride, actions }: RideOverviewProps) {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { styles, theme } = useThemedStyles(makeStyles);
   // ride.seats is already "seats still open" (the backend decrements it as bookings get
   // accepted), not the vehicle's total capacity - don't subtract confirmedPassengers here.
   const seatsLeft = ride.seats;
@@ -34,28 +36,27 @@ export function RideOverview({ ride, actions }: RideOverviewProps) {
   const co2PotentialKg = calculateCo2SavedKg(ride.distanceKm, ride.seats);
   const origin = { latitude: ride.pickupLat, longitude: ride.pickupLng };
   const destination = { latitude: ride.destinationLat, longitude: ride.destinationLng };
-  const { route } = useRoute(origin, destination); 
-  return (
+  const { route } = useRoute(origin, destination);
 
-    
+  return (
     <View style={styles.fill}>
+      {/* The top of this screen is a map with light tiles, so the status bar stays dark
+          until the map gets a night style. */}
       <StatusBar style="dark" />
 
-            <View style={[styles.mapPlaceholder, { paddingTop: insets.top + 12 }]}>
+      <View style={[styles.mapPlaceholder, { paddingTop: insets.top + 12 }]}>
         <Pressable
           style={StyleSheet.absoluteFill}
           onPress={() =>
             router.push({
-              pathname: '/route-map/[id]',
+              pathname: "/route-map/[id]",
               params: { id: String(ride.id) },
             })
           }
           accessibilityRole="button"
-          accessibilityLabel={`View route from ${ride.pickup} to ${ride.destination} on a map`}>
-          <RideRouteMap
-            ride={ride}
-            style={StyleSheet.absoluteFill}
-          />
+          accessibilityLabel={`View route from ${ride.pickup} to ${ride.destination} on a map`}
+        >
+          <RideRouteMap ride={ride} style={StyleSheet.absoluteFill} />
         </Pressable>
 
         <Pressable
@@ -63,15 +64,17 @@ export function RideOverview({ ride, actions }: RideOverviewProps) {
           hitSlop={8}
           style={styles.backButton}
           accessibilityLabel="Go back"
-          accessibilityRole="button">
-          <Ionicons name="chevron-back" size={22} color={colors.neutral.gray900} />
+          accessibilityRole="button"
+        >
+          <Ionicons name="chevron-back" size={22} color={theme.colors.text} />
         </Pressable>
       </View>
 
       <ScrollView
         style={styles.fill}
         contentContainerStyle={[styles.content, { paddingBottom: insets.bottom + 16 }]}
-        showsVerticalScrollIndicator={false}>
+        showsVerticalScrollIndicator={false}
+      >
         <View style={styles.driverRow}>
           <Avatar name={ride.driverName} size={56} />
           <View style={styles.driverInfo}>
@@ -83,7 +86,7 @@ export function RideOverview({ ride, actions }: RideOverviewProps) {
           </View>
           <View style={styles.driverSide}>
             <View style={styles.verifiedBadge}>
-              <Ionicons name="checkmark-circle" size={14} color={colors.brand.verde600} />
+              <Ionicons name="checkmark-circle" size={14} color={theme.colors.brand} />
               <Text style={styles.verifiedText}>Verified</Text>
             </View>
             <Text style={styles.price}>${ride.price.toFixed(2)}</Text>
@@ -93,11 +96,11 @@ export function RideOverview({ ride, actions }: RideOverviewProps) {
 
         <View style={styles.statsRow}>
           <StatTile
-            icon={<Ionicons name="location-outline" size={16} color={colors.neutral.gray500} />}
+            icon={<Ionicons name="location-outline" size={16} color={theme.colors.textSecondary} />}
             value={`${ride.distanceKm} km`}
           />
           <StatTile
-            icon={<Ionicons name="time-outline" size={16} color={colors.neutral.gray500} />}
+            icon={<Ionicons name="time-outline" size={16} color={theme.colors.textSecondary} />}
             value={`${ride.durationMinutes} min`}
           />
         </View>
@@ -105,15 +108,15 @@ export function RideOverview({ ride, actions }: RideOverviewProps) {
         <View style={styles.routeSection}>
           <View style={styles.routeRow}>
             <View style={styles.pickupDot} />
-            <View>
+            <View style={styles.routeTextWrap}>
               <Text style={styles.routePlace}>{ride.pickup}</Text>
               <Text style={styles.routeMeta}>Pick up · {ride.departureTime}</Text>
             </View>
           </View>
           <View style={styles.routeConnector} />
           <View style={styles.routeRow}>
-            <Ionicons name="location" size={16} color={colors.brand.verde600} />
-            <View>
+            <Ionicons name="location" size={16} color={theme.colors.brand} />
+            <View style={styles.routeTextWrap}>
               <Text style={styles.routePlace}>{ride.destination}</Text>
               <Text style={styles.routeMeta}>Drop off · est. {ride.dropoffTimeEstimate}</Text>
             </View>
@@ -126,7 +129,7 @@ export function RideOverview({ ride, actions }: RideOverviewProps) {
               <Text style={styles.sectionLabel}>Confirmed Passengers</Text>
               <View style={styles.seatsLeftPill}>
                 <Text style={styles.seatsLeftText}>
-                  {seatsLeft} seat{seatsLeft === 1 ? '' : 's'} left
+                  {seatsLeft} seat{seatsLeft === 1 ? "" : "s"} left
                 </Text>
               </View>
             </View>
@@ -148,182 +151,193 @@ export function RideOverview({ ride, actions }: RideOverviewProps) {
                 ? `Saving ${co2SavedKg.toFixed(2)} kg vs everyone driving alone`
                 : `Could save up to ${co2PotentialKg.toFixed(2)} kg if all ${ride.seats} seats fill`
             }
-            icon={<Ionicons name="leaf" size={20} color={colors.brand.verde600} />}
+            icon={<Ionicons name="leaf" size={20} color={theme.colors.brand} />}
           />
         </View>
 
         <View style={styles.fieldGroup}>{actions}</View>
       </ScrollView>
-  
     </View>
   );
 }
 
-const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
-    backgroundColor: colors.neutral.white,
-  },
-  mapPlaceholder: {
-    height: 220,
-    backgroundColor: mapBg,
-    paddingHorizontal: screenPaddingX.standard,
-  },
-  mapPlaceholderContent: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  mapPlaceholderText: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray600,
-  },
-  backButton: {
-    width: 44,
-    height: 44,
-    borderRadius: radius.full,
-    backgroundColor: colors.neutral.white,
-    alignItems: 'center',
-    justifyContent: 'center',
-    shadowColor: colors.neutral.charcoal,
-    shadowOffset: { width: 0, height: 2 },
-    shadowOpacity: 0.15,
-    shadowRadius: 4,
-    elevation: 3,
-  },
-  content: {
-    paddingHorizontal: screenPaddingX.standard,
-    paddingTop: 20,
-  },
-  driverRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 12,
-  },
-  driverInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  driverName: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.lg,
-    color: colors.neutral.gray900,
-  },
-  ratingCaption: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.xs,
-    color: colors.neutral.gray500,
-  },
-  driverSide: {
-    alignItems: 'flex-end',
-    gap: 4,
-  },
-  verifiedBadge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 4,
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-    backgroundColor: colors.brand.verde50,
-  },
-  verifiedText: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize['2xs'],
-    color: colors.brand.verde700,
-  },
-  price: {
-    marginTop: 2,
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.lg,
-    color: colors.brand.verde600,
-  },
-  priceCaption: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize['2xs'],
-    color: colors.neutral.gray500,
-  },
-  statsRow: {
-    marginTop: 20,
-    flexDirection: 'row',
-    gap: 10,
-  },
-  routeSection: {
-    marginTop: 24,
-  },
-  routeRow: {
-    flexDirection: 'row',
-    alignItems: 'flex-start',
-    gap: 10,
-  },
-  pickupDot: {
-    width: 8,
-    height: 8,
-    borderRadius: radius.full,
-    backgroundColor: colors.accent.amber500,
-    marginTop: 6,
-    marginHorizontal: 4,
-  },
-  routeConnector: {
-    width: 1.5,
-    height: 16,
-    marginLeft: 7.25,
-    backgroundColor: colors.neutral.gray200,
-  },
-  routePlace: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray900,
-  },
-  routeMeta: {
-    marginTop: 2,
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.xs,
-    color: colors.neutral.gray500,
-  },
-  passengersSection: {
-    marginTop: 24,
-  },
-  passengersHeader: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  sectionLabel: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize['2xs'],
-    color: colors.neutral.gray400,
-    textTransform: 'uppercase',
-    letterSpacing: 0.5,
-  },
-  seatsLeftPill: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-    backgroundColor: colors.neutral.gray100,
-  },
-  seatsLeftText: {
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize['2xs'],
-    color: colors.neutral.gray600,
-  },
-  passengerRow: {
-    marginTop: 12,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  passengerName: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray900,
-  },
-  co2Section: {
-    marginTop: 20,
-  },
-  fieldGroup: {
-    marginTop: 20,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    fill: {
+      flex: 1,
+      backgroundColor: t.colors.bg,
+    },
+    mapPlaceholder: {
+      height: 220,
+      backgroundColor: t.colors.surface,
+      paddingHorizontal: screenPaddingX.standard,
+    },
+    backButton: {
+      width: 44,
+      height: 44,
+      borderRadius: radius.full,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1.5,
+      borderColor: t.colors.border,
+      alignItems: "center",
+      justifyContent: "center",
+      shadowColor: "#000",
+      shadowOffset: { width: 0, height: 2 },
+      shadowOpacity: 0.15,
+      shadowRadius: 4,
+      elevation: 3,
+    },
+    content: {
+      paddingHorizontal: screenPaddingX.standard,
+      paddingTop: 20,
+    },
+    driverRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 12,
+    },
+    driverInfo: {
+      flex: 1,
+      gap: 4,
+    },
+    driverName: {
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.lg,
+      lineHeight: t.lineHeight(t.fontSize.lg),
+      color: t.colors.text,
+    },
+    ratingCaption: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.textSecondary,
+    },
+    driverSide: {
+      alignItems: "flex-end",
+      gap: 4,
+      flexShrink: 1,
+    },
+    verifiedBadge: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 4,
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: radius.full,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.brand,
+    },
+    verifiedText: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize["2xs"],
+      lineHeight: t.lineHeight(t.fontSize["2xs"]),
+      color: t.colors.brand,
+    },
+    price: {
+      marginTop: 2,
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.lg,
+      lineHeight: t.lineHeight(t.fontSize.lg),
+      color: t.colors.brand,
+    },
+    priceCaption: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize["2xs"],
+      lineHeight: t.lineHeight(t.fontSize["2xs"]),
+      color: t.colors.textSecondary,
+    },
+    statsRow: {
+      marginTop: 20,
+      flexDirection: "row",
+      gap: 10,
+    },
+    routeSection: {
+      marginTop: 24,
+    },
+    routeRow: {
+      flexDirection: "row",
+      alignItems: "flex-start",
+      gap: 10,
+    },
+    routeTextWrap: {
+      flex: 1,
+    },
+    pickupDot: {
+      width: 8,
+      height: 8,
+      borderRadius: radius.full,
+      backgroundColor: t.colors.accent,
+      marginTop: 6,
+      marginHorizontal: 4,
+    },
+    routeConnector: {
+      width: 1.5,
+      height: 16,
+      marginLeft: 7.25,
+      backgroundColor: t.colors.border,
+    },
+    routePlace: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.text,
+    },
+    routeMeta: {
+      marginTop: 2,
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.textSecondary,
+    },
+    passengersSection: {
+      marginTop: 24,
+    },
+    passengersHeader: {
+      flexDirection: "row",
+      flexWrap: "wrap",
+      alignItems: "center",
+      justifyContent: "space-between",
+      gap: 8,
+    },
+    sectionLabel: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize["2xs"],
+      lineHeight: t.lineHeight(t.fontSize["2xs"]),
+      color: t.colors.muted,
+      textTransform: "uppercase",
+      letterSpacing: 0.5,
+    },
+    seatsLeftPill: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: radius.full,
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.divider,
+    },
+    seatsLeftText: {
+      fontFamily: fontFamily.bodyMedium,
+      fontSize: t.fontSize["2xs"],
+      lineHeight: t.lineHeight(t.fontSize["2xs"]),
+      color: t.colors.textSecondary,
+    },
+    passengerRow: {
+      marginTop: 12,
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 10,
+    },
+    passengerName: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.text,
+    },
+    co2Section: {
+      marginTop: 20,
+    },
+    fieldGroup: {
+      marginTop: 20,
+    },
+  });

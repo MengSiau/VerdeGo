@@ -13,12 +13,15 @@ import { SecondaryButton } from '@/src/components/SecondaryButton';
 import { Stars } from '@/src/components/Stars';
 import type { Ride } from '@/src/data/rides';
 import { usePendingRequests } from '@/src/hooks/usePendingRequests';
-import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
+import { fontFamily, radius, screenPaddingX } from '@/src/theme';
+import type { Theme } from '@/src/theme/useTheme';
+import { useThemedStyles } from '@/src/theme/useThemedStyles';
 
 // Lists the rides the current user is offering as a driver. Tap one to expand it and
 // accept/decline the passenger requests on that ride, without leaving this screen.
 export function Requests() {
   const insets = useSafeAreaInsets();
+  const { styles, theme } = useThemedStyles(makeStyles);
   const { groups, totalPending, loading, error, refresh } = usePendingRequests();
   const [expandedRideId, setExpandedRideId] = useState<string | null>(null);
   const [respondingId, setRespondingId] = useState<string | null>(null);
@@ -49,8 +52,9 @@ export function Requests() {
 
   return (
     <View style={styles.fill}>
+      {/* Header is dark in every palette, so the status bar is always light */}
       <StatusBar style="light" />
-      <LinearGradient colors={gradients.headerHero} style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <LinearGradient colors={[...theme.colors.headerGradient]} style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>Passenger Requests</Text>
         <Text style={styles.headerSubtitle}>
           {totalPending} pending request{totalPending === 1 ? '' : 's'} across {groups.length} ride
@@ -60,7 +64,7 @@ export function Requests() {
 
       {loading && groups.length === 0 ? (
         <View style={styles.emptyState}>
-          <ActivityIndicator size="large" color={colors.brand.verde600} />
+          <ActivityIndicator size="large" color={theme.colors.brand} />
         </View>
       ) : error ? (
         <View style={styles.emptyState}>
@@ -72,7 +76,7 @@ export function Requests() {
         </View>
       ) : groups.length === 0 ? (
         <View style={styles.emptyState}>
-          <Ionicons name="car-outline" size={20} color={colors.neutral.gray400} />
+          <Ionicons name="car-outline" size={20} color={theme.colors.muted} />
           <Text style={styles.emptyText}>No pending requests right now</Text>
         </View>
       ) : (
@@ -81,7 +85,7 @@ export function Requests() {
           contentContainerStyle={[styles.list, { paddingBottom: insets.bottom + 20 }]}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={colors.brand.verde600} />
+            <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={theme.colors.brand} />
           }>
           {groups.map(({ ride, requests: rideRequests }) => (
             <RideAccordion
@@ -120,6 +124,7 @@ function RideAccordion({
   onAccept: (item: PendingRequest) => void;
   onDecline: (item: PendingRequest) => void;
 }) {
+  const { styles, theme } = useThemedStyles(makeStyles);
   const pendingCount = requests.length;
 
   return (
@@ -139,7 +144,7 @@ function RideAccordion({
         <Ionicons
           name={expanded ? 'chevron-up' : 'chevron-down'}
           size={18}
-          color={colors.neutral.gray300}
+          color={theme.colors.muted}
         />
       </Pressable>
 
@@ -174,6 +179,7 @@ function RequestCard({
   onAccept: () => void;
   onDecline: () => void;
 }) {
+  const { styles } = useThemedStyles(makeStyles);
   const { passenger } = request;
 
   return (
@@ -205,149 +211,162 @@ function RequestCard({
   );
 }
 
-const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: screenPaddingX.standard,
-    paddingBottom: 20,
-  },
-  headerTitle: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.xl,
-    color: colors.neutral.white,
-  },
-  headerSubtitle: {
-    marginTop: 4,
-    fontFamily: fontFamily.bodyMedium,
-    fontSize: fontSize.sm,
-    color: 'rgba(255,255,255,0.85)',
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingHorizontal: screenPaddingX.standard,
-    backgroundColor: colors.neutral.white,
-  },
-  emptyTitle: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.base,
-    color: colors.neutral.gray800,
-  },
-  emptyText: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray400,
-    textAlign: 'center',
-  },
-  emptyButton: {
-    marginTop: 4,
-    alignSelf: 'stretch',
-  },
-  list: {
-    backgroundColor: colors.neutral.white,
-    paddingHorizontal: screenPaddingX.standard,
-    paddingTop: 16,
-    gap: 12,
-  },
-  row: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 12,
-    borderRadius: radius['2xl'],
-    borderWidth: 1,
-    borderColor: colors.neutral.gray100,
-    backgroundColor: colors.neutral.white,
-    padding: 16,
-  },
-  routeInfo: {
-    flex: 1,
-    gap: 4,
-  },
-  routeText: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.base,
-    color: colors.neutral.gray900,
-  },
-  metaText: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.xs,
-    color: colors.neutral.gray500,
-  },
-  pendingBadge: {
-    paddingHorizontal: 10,
-    paddingVertical: 4,
-    borderRadius: radius.full,
-    backgroundColor: colors.accent.amber400,
-  },
-  pendingBadgeText: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.xs,
-    color: colors.neutral.white,
-  },
-  dropdown: {
-    marginTop: 10,
-    gap: 8,
-  },
-  card: {
-    borderRadius: radius.xl,
-    borderWidth: 1,
-    borderColor: colors.neutral.gray100,
-    backgroundColor: colors.neutral.white,
-    padding: 12,
-    shadowColor: colors.neutral.charcoal,
-    shadowOffset: { width: 0, height: 1 },
-    shadowOpacity: 0.05,
-    shadowRadius: 4,
-    elevation: 1,
-  },
-  cardTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 10,
-  },
-  passengerInfo: {
-    flex: 1,
-    gap: 2,
-  },
-  passengerName: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray900,
-  },
-  ratingRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-  },
-  ratingText: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.xs,
-    color: colors.neutral.gray500,
-  },
-  pickupTimeColumn: {
-    alignItems: 'flex-end',
-  },
-  pickupLabel: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.xs,
-    color: colors.neutral.gray500,
-  },
-  pickupTime: {
-    marginTop: 2,
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray900,
-  },
-  actionsRow: {
-    marginTop: 10,
-    flexDirection: 'row',
-    gap: 8,
-  },
-  actionFlex: {
-    flex: 1,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    fill: {
+      flex: 1,
+      backgroundColor: t.colors.bg,
+    },
+    header: {
+      paddingHorizontal: screenPaddingX.standard,
+      paddingBottom: 20,
+    },
+    headerTitle: {
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.xl,
+      lineHeight: t.lineHeight(t.fontSize.xl),
+      color: t.colors.onHeader,
+    },
+    headerSubtitle: {
+      marginTop: 4,
+      fontFamily: fontFamily.bodyMedium,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.onHeader,
+    },
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingHorizontal: screenPaddingX.standard,
+      backgroundColor: t.colors.bg,
+    },
+    emptyTitle: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.base,
+      lineHeight: t.lineHeight(t.fontSize.base),
+      color: t.colors.text,
+    },
+    emptyText: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+      textAlign: 'center',
+    },
+    emptyButton: {
+      marginTop: 4,
+      alignSelf: 'stretch',
+    },
+    list: {
+      backgroundColor: t.colors.bg,
+      paddingHorizontal: screenPaddingX.standard,
+      paddingTop: 16,
+      gap: 12,
+    },
+    row: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 12,
+      borderRadius: radius['2xl'],
+      borderWidth: 1,
+      borderColor: t.colors.divider,
+      backgroundColor: t.colors.surface,
+      padding: 16,
+    },
+    routeInfo: {
+      flex: 1,
+      gap: 4,
+    },
+    routeText: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.base,
+      lineHeight: t.lineHeight(t.fontSize.base),
+      color: t.colors.text,
+    },
+    metaText: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.textSecondary,
+    },
+    pendingBadge: {
+      paddingHorizontal: 10,
+      paddingVertical: 4,
+      borderRadius: radius.full,
+      backgroundColor: t.colors.accent,
+    },
+    pendingBadgeText: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.onBrand,
+    },
+    dropdown: {
+      marginTop: 10,
+      gap: 8,
+    },
+    card: {
+      borderRadius: radius.xl,
+      borderWidth: 1,
+      borderColor: t.colors.divider,
+      backgroundColor: t.colors.surface,
+      padding: 12,
+      shadowColor: '#000',
+      shadowOffset: { width: 0, height: 1 },
+      shadowOpacity: 0.05,
+      shadowRadius: 4,
+      elevation: 1,
+    },
+    cardTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 10,
+    },
+    passengerInfo: {
+      flex: 1,
+      gap: 2,
+    },
+    passengerName: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.text,
+    },
+    ratingRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+    },
+    ratingText: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.textSecondary,
+    },
+    pickupTimeColumn: {
+      alignItems: 'flex-end',
+    },
+    pickupLabel: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.textSecondary,
+    },
+    pickupTime: {
+      marginTop: 2,
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.text,
+    },
+    actionsRow: {
+      marginTop: 10,
+      flexDirection: 'row',
+      gap: 8,
+    },
+    actionFlex: {
+      flex: 1,
+    },
+  });

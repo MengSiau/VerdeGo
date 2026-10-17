@@ -1,7 +1,7 @@
-import { Ionicons } from '@expo/vector-icons';
-import { Pressable, StyleSheet, View } from 'react-native';
+import { Ionicons } from "@expo/vector-icons";
+import { Pressable, StyleSheet, View } from "react-native";
 
-import { colors } from '@/src/theme';
+import { useTheme } from "@/src/theme/useTheme";
 
 type StarsProps = {
   rating: number;
@@ -11,23 +11,35 @@ type StarsProps = {
   gap?: number;
 };
 
-// 1-5 star rating. Filled = amber-500, empty = gray-200.
+// 1-5 star rating. Filled star = accent, empty star = outline in the border colour.
+// Tappable (for picking a rating) when onChange is given, otherwise a read-only display.
 export function Stars({ rating, size = 14, onChange, gap = 2 }: StarsProps) {
+  const { colors } = useTheme();
   const filled = Math.round(rating);
 
   return (
-    <View style={[styles.row, { gap }]}>
+    <View
+      style={[styles.row, { gap }]}
+      accessible={!onChange}
+      accessibilityLabel={onChange ? undefined : `Rated ${rating.toFixed(1)} out of 5`}
+    >
       {Array.from({ length: 5 }).map((_, index) => {
         const star = (
           <Ionicons
-            name={index < filled ? 'star' : 'star-outline'}
+            name={index < filled ? "star" : "star-outline"}
             size={size}
-            color={index < filled ? colors.accent.amber500 : colors.neutral.gray200}
+            color={index < filled ? colors.accent : colors.border}
           />
         );
         if (!onChange) return <View key={index}>{star}</View>;
         return (
-          <Pressable key={index} onPress={() => onChange(index + 1)} hitSlop={4}>
+          <Pressable
+            key={index}
+            onPress={() => onChange(index + 1)}
+            hitSlop={4}
+            accessibilityRole="button"
+            accessibilityLabel={`Rate ${index + 1} out of 5`}
+          >
             {star}
           </Pressable>
         );
@@ -38,6 +50,6 @@ export function Stars({ rating, size = 14, onChange, gap = 2 }: StarsProps) {
 
 const styles = StyleSheet.create({
   row: {
-    flexDirection: 'row',
+    flexDirection: "row",
   },
 });

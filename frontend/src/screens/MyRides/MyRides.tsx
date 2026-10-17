@@ -12,7 +12,9 @@ import { MyRideCard } from '@/src/components/MyRideCard';
 import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { SegmentedTabs } from '@/src/components/SegmentedTabs';
 import { useMyRides } from '@/src/hooks/useMyRides';
-import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
+import { fontFamily, radius, screenPaddingX } from '@/src/theme';
+import type { Theme } from '@/src/theme/useTheme';
+import { useThemedStyles } from '@/src/theme/useThemedStyles';
 
 type RidesTab = 'upcoming' | 'past';
 type RoleFilter = 'all' | 'driving' | 'riding';
@@ -20,6 +22,7 @@ type RoleFilter = 'all' | 'driving' | 'riding';
 export function MyRides() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { styles, theme } = useThemedStyles(makeStyles);
   const { upcoming, past, loading, error, refresh } = useMyRides();
   const [tab, setTab] = useState<RidesTab>('upcoming');
   const [roleFilter, setRoleFilter] = useState<RoleFilter>('all');
@@ -36,8 +39,9 @@ export function MyRides() {
 
   return (
     <View style={styles.fill}>
+      {/* Header is dark in every palette, so the status bar is always light */}
       <StatusBar style="light" />
-      <LinearGradient colors={gradients.headerHero} style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <LinearGradient colors={[...theme.colors.headerGradient]} style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <Text style={styles.headerTitle}>My Rides</Text>
         <View style={styles.tabsWrap}>
           <SegmentedTabs
@@ -56,9 +60,9 @@ export function MyRides() {
         <View style={styles.filterSection}>
           <FilterChips
             options={[
-              { label: 'All', value: 'all', icon: <Ionicons name="apps-outline" size={14} color={roleFilter === 'all' ? colors.neutral.white : colors.neutral.gray600} /> },
-              { label: 'Driving', value: 'driving', icon: <Ionicons name="car-sport-outline" size={14} color={roleFilter === 'driving' ? colors.neutral.white : colors.neutral.gray600} /> },
-              { label: 'Riding', value: 'riding', icon: <Ionicons name="person-outline" size={14} color={roleFilter === 'riding' ? colors.neutral.white : colors.neutral.gray600} /> },
+              { label: 'All', value: 'all', icon: (color) => <Ionicons name="apps-outline" size={14} color={color} /> },
+              { label: 'Driving', value: 'driving', icon: (color) => <Ionicons name="car-sport-outline" size={14} color={color} /> },
+              { label: 'Riding', value: 'riding', icon: (color) => <Ionicons name="person-outline" size={14} color={color} /> },
             ]}
             value={roleFilter}
             onChange={setRoleFilter}
@@ -68,7 +72,7 @@ export function MyRides() {
 
       {loading && upcoming.length === 0 && past.length === 0 ? (
         <View style={styles.centeredState}>
-          <ActivityIndicator size="large" color={colors.brand.verde600} />
+          <ActivityIndicator size="large" color={theme.colors.brand} />
         </View>
       ) : error ? (
         <View style={styles.centeredState}>
@@ -84,7 +88,7 @@ export function MyRides() {
           contentContainerStyle={styles.listContent}
           showsVerticalScrollIndicator={false}
           refreshControl={
-            <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={colors.brand.verde600} />
+            <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={theme.colors.brand} />
           }>
           {tab === 'upcoming' ? (
             <View style={styles.cardsList}>
@@ -98,7 +102,7 @@ export function MyRides() {
                 />
               ))}
               <View style={styles.endOfList}>
-                <Ionicons name="car-outline" size={16} color={colors.neutral.gray400} />
+                <Ionicons name="car-outline" size={16} color={theme.colors.muted} />
                 <Text style={styles.endOfListText}>
                   {upcomingRides.length === 0 ? 'No rides match this filter' : 'No more upcoming rides'}
                 </Text>
@@ -124,7 +128,7 @@ export function MyRides() {
             </View>
           ) : (
             <View style={styles.emptyState}>
-              <Ionicons name="time-outline" size={20} color={colors.neutral.gray400} />
+              <Ionicons name="time-outline" size={20} color={theme.colors.muted} />
               <Text style={styles.endOfListText}>No past rides yet</Text>
             </View>
           )}
@@ -136,78 +140,91 @@ export function MyRides() {
   );
 }
 
-const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: screenPaddingX.standard,
-    paddingBottom: 16,
-  },
-  headerTitle: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.xl,
-    color: colors.neutral.white,
-  },
-  tabsWrap: {
-    marginTop: 16,
-  },
-  filterSection: {
-    backgroundColor: colors.neutral.white,
-    paddingHorizontal: screenPaddingX.standard,
-    paddingTop: 16,
-  },
-  listContent: {
-    flexGrow: 1,
-    backgroundColor: colors.neutral.white,
-    paddingHorizontal: screenPaddingX.standard,
-    paddingTop: 16,
-    paddingBottom: 20,
-  },
-  cardsList: {
-    gap: 12,
-  },
-  endOfList: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-    paddingVertical: 16,
-    borderRadius: radius['2xl'],
-    backgroundColor: colors.neutral.gray100,
-  },
-  emptyState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    gap: 8,
-  },
-  endOfListText: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray400,
-  },
-  centeredState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: screenPaddingX.standard,
-    gap: 8,
-    backgroundColor: colors.neutral.white,
-  },
-  errorTitle: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.base,
-    color: colors.neutral.gray800,
-  },
-  errorSubtitle: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray500,
-    textAlign: 'center',
-  },
-  errorButton: {
-    marginTop: 12,
-    alignSelf: 'stretch',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    fill: {
+      flex: 1,
+      backgroundColor: t.colors.bg,
+    },
+    header: {
+      paddingHorizontal: screenPaddingX.standard,
+      paddingBottom: 16,
+    },
+    headerTitle: {
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.xl,
+      lineHeight: t.lineHeight(t.fontSize.xl),
+      color: t.colors.onHeader,
+    },
+    tabsWrap: {
+      marginTop: 16,
+    },
+    filterSection: {
+      backgroundColor: t.colors.bg,
+      paddingHorizontal: screenPaddingX.standard,
+      paddingTop: 16,
+    },
+    listContent: {
+      flexGrow: 1,
+      backgroundColor: t.colors.bg,
+      paddingHorizontal: screenPaddingX.standard,
+      paddingTop: 16,
+      paddingBottom: 20,
+    },
+    cardsList: {
+      gap: 12,
+    },
+    endOfList: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+      paddingVertical: 16,
+      paddingHorizontal: 16,
+      borderRadius: radius['2xl'],
+      // surface + outline instead of a grey fill, which turns into a solid
+      // black/white block in high contrast and hides the text
+      backgroundColor: t.colors.surface,
+      borderWidth: 1,
+      borderColor: t.colors.divider,
+    },
+    emptyState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      gap: 8,
+    },
+    endOfListText: {
+      flexShrink: 1,
+      textAlign: 'center',
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.muted,
+    },
+    centeredState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: screenPaddingX.standard,
+      gap: 8,
+      backgroundColor: t.colors.bg,
+    },
+    errorTitle: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.base,
+      lineHeight: t.lineHeight(t.fontSize.base),
+      color: t.colors.text,
+    },
+    errorSubtitle: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+      textAlign: 'center',
+    },
+    errorButton: {
+      marginTop: 12,
+      alignSelf: 'stretch',
+    },
+  });

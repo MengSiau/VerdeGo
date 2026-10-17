@@ -11,7 +11,9 @@ import { PrimaryButton } from '@/src/components/PrimaryButton';
 import { RideCard } from '@/src/components/RideCard';
 import { useBrowseRides } from '@/src/hooks/useBrowseRides';
 import { calculateCo2SavedKg } from '@/src/utils/co2savings';
-import { colors, fontFamily, fontSize, gradients, radius, screenPaddingX } from '@/src/theme';
+import { fontFamily, radius, screenPaddingX } from '@/src/theme';
+import type { Theme } from '@/src/theme/useTheme';
+import { useThemedStyles } from '@/src/theme/useThemedStyles';
 
 type SortFilter = 'eco' | 'cost' | 'time';
 
@@ -24,6 +26,7 @@ const SORT_LABEL: Record<SortFilter, string> = {
 export function Home() {
   const insets = useSafeAreaInsets();
   const router = useRouter();
+  const { styles, theme } = useThemedStyles(makeStyles);
   const { rides, loading, error, refresh } = useBrowseRides();
   const [sort, setSort] = useState<SortFilter>('eco');
 
@@ -36,18 +39,19 @@ export function Home() {
 
   return (
     <View style={styles.fill}>
+      {/* Header is dark green/black in every palette, so the status bar is always light */}
       <StatusBar style="light" />
-      <LinearGradient colors={gradients.headerHero} style={[styles.header, { paddingTop: insets.top + 12 }]}>
+      <LinearGradient colors={[...theme.colors.headerGradient]} style={[styles.header, { paddingTop: insets.top + 12 }]}>
         <View style={styles.headerTopRow}>
           <Text style={styles.headerTitle}>Find a Ride</Text>
           <View style={styles.co2Badge}>
-            <Ionicons name="leaf" size={14} color={colors.neutral.white} />
+            <Ionicons name="leaf" size={14} color={theme.colors.onHeader} />
             <Text style={styles.co2BadgeText}>{totalCo2Saved.toFixed(1)}kg saved</Text>
           </View>
         </View>
 
         <View style={styles.searchBar}>
-          <Ionicons name="search" size={18} color={colors.neutral.gray400} />
+          <Ionicons name="search" size={18} color={theme.colors.muted} />
           <Text style={styles.searchPlaceholder}>Search pickup location...</Text>
         </View>
       </LinearGradient>
@@ -56,9 +60,9 @@ export function Home() {
         <View style={styles.filterSection}>
           <FilterChips
             options={[
-              { label: 'Eco', value: 'eco', icon: <Ionicons name="leaf" size={16} color={sort === 'eco' ? colors.neutral.white : colors.brand.verde600} /> },
-              { label: 'Cost', value: 'cost', icon: <Ionicons name="cash-outline" size={16} color={sort === 'cost' ? colors.neutral.white : colors.neutral.gray600} /> },
-              { label: 'Time', value: 'time', icon: <Ionicons name="time-outline" size={16} color={sort === 'time' ? colors.neutral.white : colors.neutral.gray600} /> },
+              { label: 'Eco', value: 'eco', icon: (color) => <Ionicons name="leaf" size={16} color={color} /> },
+              { label: 'Cost', value: 'cost', icon: (color) => <Ionicons name="cash-outline" size={16} color={color} /> },
+              { label: 'Time', value: 'time', icon: (color) => <Ionicons name="time-outline" size={16} color={color} /> },
             ]}
             value={sort}
             onChange={setSort}
@@ -70,7 +74,7 @@ export function Home() {
 
         {loading && rides.length === 0 ? (
           <View style={styles.centeredState}>
-            <ActivityIndicator size="large" color={colors.brand.verde600} />
+            <ActivityIndicator size="large" color={theme.colors.brand} />
           </View>
         ) : error ? (
           <View style={styles.centeredState}>
@@ -91,7 +95,7 @@ export function Home() {
             contentContainerStyle={styles.listContent}
             showsVerticalScrollIndicator={false}
             refreshControl={
-              <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={colors.brand.verde600} />
+              <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={theme.colors.brand} />
             }>
             {rides.map((ride) => (
               <RideCard key={ride.id} ride={ride} onPress={() => router.push(`/ride-details/${ride.id}`)} />
@@ -105,93 +109,109 @@ export function Home() {
   );
 }
 
-const styles = StyleSheet.create({
-  fill: {
-    flex: 1,
-  },
-  header: {
-    paddingHorizontal: screenPaddingX.standard,
-    paddingBottom: 20,
-  },
-  headerTopRow: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    justifyContent: 'space-between',
-  },
-  headerTitle: {
-    fontFamily: fontFamily.headingBold,
-    fontSize: fontSize.xl,
-    color: colors.neutral.white,
-  },
-  co2Badge: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    paddingHorizontal: 12,
-    paddingVertical: 6,
-    borderRadius: radius.full,
-    backgroundColor: 'rgba(255,255,255,0.2)',
-  },
-  co2BadgeText: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.xs,
-    color: colors.neutral.white,
-  },
-  searchBar: {
-    marginTop: 16,
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 8,
-    height: 50,
-    paddingHorizontal: 16,
-    borderRadius: radius.full,
-    backgroundColor: colors.neutral.white,
-  },
-  searchPlaceholder: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray400,
-  },
-  body: {
-    flex: 1,
-    backgroundColor: colors.neutral.white,
-  },
-  filterSection: {
-    paddingHorizontal: screenPaddingX.standard,
-    paddingTop: 16,
-  },
-  resultsText: {
-    marginTop: 12,
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.xs,
-    color: colors.neutral.gray500,
-  },
-  listContent: {
-    paddingHorizontal: screenPaddingX.standard,
-    paddingTop: 12,
-    paddingBottom: 20,
-    gap: 12,
-  },
-  centeredState: {
-    flex: 1,
-    alignItems: 'center',
-    justifyContent: 'center',
-    paddingHorizontal: screenPaddingX.standard,
-    gap: 8,
-  },
-  errorTitle: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.base,
-    color: colors.neutral.gray800,
-  },
-  errorSubtitle: {
-    fontFamily: fontFamily.bodyRegular,
-    fontSize: fontSize.sm,
-    color: colors.neutral.gray500,
-    textAlign: 'center',
-  },
-  errorButton: {
-    marginTop: 12,
-    alignSelf: 'stretch',
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    fill: {
+      flex: 1,
+      backgroundColor: t.colors.bg,
+    },
+    header: {
+      paddingHorizontal: screenPaddingX.standard,
+      paddingBottom: 20,
+    },
+    headerTopRow: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      justifyContent: 'space-between',
+      flexWrap: 'wrap',
+      gap: 8,
+    },
+    headerTitle: {
+      flexShrink: 1,
+      fontFamily: fontFamily.headingBold,
+      fontSize: t.fontSize.xl,
+      lineHeight: t.lineHeight(t.fontSize.xl),
+      color: t.colors.onHeader,
+    },
+    co2Badge: {
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 6,
+      paddingHorizontal: 12,
+      paddingVertical: 6,
+      borderRadius: radius.full,
+      backgroundColor: 'rgba(255,255,255,0.2)',
+    },
+    co2BadgeText: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.onHeader,
+    },
+    searchBar: {
+      marginTop: 16,
+      flexDirection: 'row',
+      alignItems: 'center',
+      gap: 8,
+      minHeight: 50,
+      paddingHorizontal: 16,
+      paddingVertical: 8,
+      borderRadius: radius.full,
+      backgroundColor: t.colors.surface,
+      // In high contrast the bar needs an edge, or it merges with a black header / white page
+      borderWidth: 1.5,
+      borderColor: t.colors.divider,
+    },
+    searchPlaceholder: {
+      flex: 1,
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.muted,
+    },
+    body: {
+      flex: 1,
+      backgroundColor: t.colors.bg,
+    },
+    filterSection: {
+      paddingHorizontal: screenPaddingX.standard,
+      paddingTop: 16,
+    },
+    resultsText: {
+      marginTop: 12,
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.xs,
+      lineHeight: t.lineHeight(t.fontSize.xs),
+      color: t.colors.textSecondary,
+    },
+    listContent: {
+      paddingHorizontal: screenPaddingX.standard,
+      paddingTop: 12,
+      paddingBottom: 20,
+      gap: 12,
+    },
+    centeredState: {
+      flex: 1,
+      alignItems: 'center',
+      justifyContent: 'center',
+      paddingHorizontal: screenPaddingX.standard,
+      gap: 8,
+    },
+    errorTitle: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.base,
+      lineHeight: t.lineHeight(t.fontSize.base),
+      color: t.colors.text,
+    },
+    errorSubtitle: {
+      fontFamily: fontFamily.bodyRegular,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+      color: t.colors.textSecondary,
+      textAlign: 'center',
+    },
+    errorButton: {
+      marginTop: 12,
+      alignSelf: 'stretch',
+    },
+  });

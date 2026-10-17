@@ -1,12 +1,15 @@
-import type { ReactNode } from 'react';
-import { Pressable, StyleSheet, Text, View } from 'react-native';
+import type { ReactNode } from "react";
+import { Pressable, StyleSheet, Text, View } from "react-native";
 
-import { colors, fontFamily, fontSize, radius } from '@/src/theme';
+import { fontFamily, radius } from "@/src/theme";
+import type { Theme } from "@/src/theme/useTheme";
+import { useThemedStyles } from "@/src/theme/useThemedStyles";
 
 type FilterChipOption<T extends string> = {
   label: string;
   value: T;
-  icon: ReactNode;
+  /** Receives the colour the icon should use for the chip's current state. */
+  icon: (color: string) => ReactNode;
 };
 
 type FilterChipsProps<T extends string> = {
@@ -15,19 +18,33 @@ type FilterChipsProps<T extends string> = {
   onChange: (value: T) => void;
 };
 
-// Pill filter chips (rounded-full, content-width) - e.g. the Eco/Cost/Time sort filter on Home.
-export function FilterChips<T extends string>({ options, value, onChange }: FilterChipsProps<T>) {
+// Pill filter chips (rounded-full, content-width)
+export function FilterChips<T extends string>({
+  options,
+  value,
+  onChange,
+}: FilterChipsProps<T>) {
+  const { styles, theme } = useThemedStyles(makeStyles);
+
   return (
-    <View style={styles.row}>
+    <View style={styles.row} accessibilityRole="radiogroup">
       {options.map((option) => {
         const active = option.value === value;
+        const contentColor = active ? theme.colors.onBrand : theme.colors.textSecondary;
         return (
           <Pressable
             key={option.value}
             onPress={() => onChange(option.value)}
-            style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}>
-            {option.icon}
-            <Text style={[styles.label, active ? styles.labelActive : styles.labelInactive]}>
+            accessibilityRole="radio"
+            accessibilityLabel={option.label}
+            accessibilityState={{ selected: active, checked: active }}
+            style={[styles.chip, active ? styles.chipActive : styles.chipInactive]}
+          >
+            {option.icon(contentColor)}
+            <Text
+              style={[styles.label, { color: contentColor }]}
+              maxFontSizeMultiplier={1.6}
+            >
               {option.label}
             </Text>
           </Pressable>
@@ -37,35 +54,34 @@ export function FilterChips<T extends string>({ options, value, onChange }: Filt
   );
 }
 
-const styles = StyleSheet.create({
-  row: {
-    flexDirection: 'row',
-    gap: 10,
-  },
-  chip: {
-    flexDirection: 'row',
-    alignItems: 'center',
-    gap: 6,
-    minHeight: 40,
-    paddingHorizontal: 16,
-    borderRadius: radius.full,
-  },
-  chipActive: {
-    backgroundColor: colors.brand.verde500,
-  },
-  chipInactive: {
-    backgroundColor: colors.neutral.white,
-    borderWidth: 1.5,
-    borderColor: colors.neutral.gray200,
-  },
-  label: {
-    fontFamily: fontFamily.headingSemibold,
-    fontSize: fontSize.sm,
-  },
-  labelActive: {
-    color: colors.neutral.white,
-  },
-  labelInactive: {
-    color: colors.neutral.gray600,
-  },
-});
+const makeStyles = (t: Theme) =>
+  StyleSheet.create({
+    row: {
+      flexDirection: "row",
+      flexWrap: "wrap", // chips drop to a second line, no overflow 
+      gap: 10,
+    },
+    chip: {
+      flexDirection: "row",
+      alignItems: "center",
+      gap: 6,
+      minHeight: 40,
+      paddingHorizontal: 16,
+      paddingVertical: 6,
+      borderRadius: radius.full,
+      borderWidth: 1.5, // same width in both states so chips don't change size when selected
+    },
+    chipActive: {
+      backgroundColor: t.colors.brand,
+      borderColor: t.colors.brand,
+    },
+    chipInactive: {
+      backgroundColor: t.colors.surface,
+      borderColor: t.colors.border,
+    },
+    label: {
+      fontFamily: fontFamily.headingSemibold,
+      fontSize: t.fontSize.sm,
+      lineHeight: t.lineHeight(t.fontSize.sm),
+    },
+  });
