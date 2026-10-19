@@ -37,6 +37,30 @@ export function Home() {
     [rides]
   );
 
+  const sortedRides = useMemo(() => {
+    return [...rides].sort((a, b) => {
+      switch (sort) {
+        case 'eco':
+          // Highest estimated CO₂ savings first.
+          return b.co2SavedKg - a.co2SavedKg;
+
+        case 'cost':
+          // Cheapest rides first.
+          return a.price - b.price;
+
+        case 'time':
+          // Earliest estimated arrival first (12-hour formatted time).
+          return (
+            new Date(`1970-01-01 ${a.dropoffTimeEstimate}`).getTime() -
+            new Date(`1970-01-01 ${b.dropoffTimeEstimate}`).getTime()
+          );
+
+        default:
+          return 0;
+      }
+    });
+  }, [rides, sort]);
+
   return (
     <View style={styles.fill}>
       {/* Header is dark green/black in every palette, so the status bar is always light */}
@@ -97,8 +121,12 @@ export function Home() {
             refreshControl={
               <RefreshControl refreshing={loading} onRefresh={() => void refresh()} tintColor={theme.colors.brand} />
             }>
-            {rides.map((ride) => (
-              <RideCard key={ride.id} ride={ride} onPress={() => router.push(`/ride-details/${ride.id}`)} />
+            {sortedRides.map((ride) => (
+              <RideCard
+                key={ride.id}
+                ride={ride}
+                onPress={() => router.push(`/ride-details/${ride.id}`)}
+              />
             ))}
           </ScrollView>
         )}
