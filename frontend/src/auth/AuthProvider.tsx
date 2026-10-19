@@ -71,7 +71,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (!data?.url) throw new Error('Could not start sign-in. Please try again.');
 
       const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, {
-        preferEphemeralSession: true, // iOS only - forces a fresh login instead of reusing a cached session
+        preferEphemeralSession: false, // iOS only - forces a fresh login instead of reusing a cached session
       });
 
       // User dismissed the browser - not an error.
