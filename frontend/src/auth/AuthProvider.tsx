@@ -46,9 +46,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
     return () => sub.subscription.unsubscribe();
   }, []);
 
-  const signInWithMonash = useCallback(async () => {
-    setError(null);
-    setSigningIn(true);
+    const signInWithMonash = useCallback(async ({ forceFreshLogin = false } = {}) => {
 
     try {
       // In Expo Go this resolves to an exp:// URL derived from the dev server,
@@ -64,7 +62,7 @@ export function AuthProvider({ children }: { children: ReactNode }) {
           queryParams: {
             // Skips Google's account picker and forces Monash SSO
             hd: 'student.monash.edu',
-            prompt: 'select_account', // forces account picker if multiple accounts are signed in
+            prompt: 'login', // forces account picker if multiple accounts are signed in
           },
         },
       });
@@ -72,7 +70,9 @@ export function AuthProvider({ children }: { children: ReactNode }) {
       if (oauthError) throw new Error(oauthError.message);
       if (!data?.url) throw new Error('Could not start sign-in. Please try again.');
 
-      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo);
+      const result = await WebBrowser.openAuthSessionAsync(data.url, redirectTo, {
+        preferEphemeralSession: true, // iOS only - forces a fresh login instead of reusing a cached session
+      });
 
       // User dismissed the browser - not an error.
       if (result.type !== 'success') return;
