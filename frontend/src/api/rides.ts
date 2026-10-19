@@ -59,12 +59,13 @@ export interface CreateRideRequest {
     departure_time: string;
     price_per_passenger: number;
     seats_available: number;
-    // Optional: if the client already has a real route estimate (e.g. from a routing
-    // API), all three persist it as the ride's route_estimates row. A partial set is
-    // ignored server-side, so don't send one or two without the rest.
-    distance_km?: number;
-    duration_min?: number;
-    co2_estimate_kg?: number;
+    // Required: written to the ride's route_estimates row. The server rejects the
+    // request if any of these three is missing, and rolls the ride back if the
+    // estimate insert itself fails - a ride can't exist without the figures every
+    // screen reads.
+    distance_km: number;
+    duration_min: number;
+    co2_estimate_kg: number;
 }
 
 export function getRides(): Promise<RideWithDetails[]> {

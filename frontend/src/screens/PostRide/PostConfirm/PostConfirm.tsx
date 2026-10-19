@@ -79,6 +79,7 @@ export function PostConfirm() {
       !vehicle ||
       co2Total === undefined ||
       distanceKm === undefined ||
+      draft.durationMinutes === undefined ||
       !origin ||
       !destination
     ) {

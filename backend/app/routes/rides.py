@@ -1,7 +1,7 @@
 import os
 from datetime import datetime, timedelta, timezone
 
-from flask import Blueprint, jsonify, request
+from flask import Blueprint, current_app, jsonify, request
 from supabase import create_client
 
 from app.auth import get_authenticated_user
@@ -183,15 +183,22 @@ def get_rides():
             for vehicle in user_vehicles_response.data
         ]
 
-        rides_response = (
+        rides_query = (
             supabase
             .table("rides")
             .select("*")
             .eq("ride_status", "scheduled")
             .gt("seats_available", 0)
-            .not_.in_("vehicle_id", own_vehicle_ids)
-            .execute()
         )
+
+        if own_vehicle_ids:
+            # not_.in_ with an empty list produces invalid SQL, so only exclude when the
+            # user actually owns vehicles - a new user owns none.
+            rides_query = rides_query.not_.in_("vehicle_id", own_vehicle_ids)
+
+        # Soonest first - without an explicit order Postgres returns rows in whatever
+        # order it finds them, so the feed shuffles between loads.
+        rides_response = rides_query.order("departure_time").execute()
 
         estimates_response = (
             supabase
@@ -260,10 +267,12 @@ def get_rides():
             ride_id = ride["ride_id"]
             estimate = estimates_by_ride_id.get(ride_id, {})
 
-            vehicle = vehicles_by_id[ride["vehicle_id"]]
+            vehicle = vehicles_by_id.get(ride["vehicle_id"], {})
 
-            driver_id = vehicle["user_id"]
-            driver = users_by_id[driver_id]
+            # A deleted vehicle/user shouldn't crash the whole feed with a KeyError -
+            # the ride just renders with a blank driver instead.
+            driver_id = vehicle.get("user_id")
+            driver = users_by_id.get(driver_id, {})
 
             driver_rating = driver_ratings_by_id.get(driver_id, 0)
             driver_rating_count = len(reviews_by_user_id.get(driver_id, []))
@@ -275,8 +284,11 @@ def get_rides():
 
         return jsonify(rides), 200
 
-    except Exception as e:
-        return jsonify({"error": str(e)}), 500
+    except Exception:
+        # Logged rather than returned - matching vehicles.py, so database internals
+        # don't reach the client. The detail is in the Flask console.
+        current_app.logger.exception("Failed to load rides")
+        return jsonify({"error": "Unable to load rides"}), 500
 
 '''
 GET /api/rides/mine
@@ -752,6 +764,12 @@ def create_ride():
         "departure_time",
         "price_per_passenger",
         "seats_available",
+        # route_estimates has NOT NULL on all three, and every screen that shows a ride
+        # reads them. The client already has these from the Routes API and the vehicle's
+        # emissions factor, so it sends them rather than the server recomputing.
+        "distance_km",
+        "duration_min",
+        "co2_estimate_kg",
     ]
 
     missing_fields = [
@@ -804,30 +822,36 @@ def create_ride():
 
         ride = response.data[0]
 
-        # Optional: the client may already have a real distance/duration/CO2 for this
-        # journey (e.g. from a routing API) - persist it as the ride's route estimate so
-        # it doesn't just get thrown away. route_estimates requires all three together,
-        # so only insert if the caller sent the complete set.
-        estimate_fields = ("distance_km", "duration_min", "co2_estimate_kg")
-        if all(field in data for field in estimate_fields):
-            try:
-                supabase.table("route_estimates").insert({
+        try:
+            (
+                supabase
+                .table("route_estimates")
+                .insert({
                     "ride_id": ride["ride_id"],
                     "distance_km": data["distance_km"],
                     "duration_min": data["duration_min"],
                     "co2_estimate_kg": data["co2_estimate_kg"],
-                }).execute()
-            except Exception:
-                # The ride itself was created successfully - a failed estimate insert
-                # shouldn't fail the whole request, it just leaves the estimate null.
-                pass
+                })
+                .execute()
+            )
+        except Exception:
+            # Roll the ride back rather than leaving an orphan with no estimate - a ride
+            # with a null distance renders as a blank card everywhere, so a failed post
+            # is the better outcome.
+            (
+                supabase
+                .table("rides")
+                .delete()
+                .eq("ride_id", ride["ride_id"])
+                .execute()
+            )
+            raise
 
         return jsonify(ride), 201
 
-    except Exception as e:
-        return jsonify({
-            "error": str(e)
-        }), 400
+    except Exception:
+        current_app.logger.exception("Failed to create ride")
+        return jsonify({"error": "Unable to post this ride"}), 400
 
 '''
 POST /api/rides/<ride_id>/request
