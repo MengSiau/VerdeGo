@@ -1,6 +1,7 @@
 ﻿import os
 
 from flask import Blueprint, current_app, jsonify, request
+from postgrest.exceptions import APIError
 from supabase import create_client
 
 from app.auth import get_authenticated_user
@@ -209,5 +210,17 @@ def delete_vehicle(vehicle_id):
 
         return "", 204
 
+    except APIError as error:
+        # rides.vehicle_id has no ON DELETE CASCADE, so a vehicle that's ever been used
+        # to post a ride (even a past/cancelled one) can't be removed - it would orphan
+        # that ride's row. 23503 is Postgres's foreign_key_violation code.
+        if error.code == "23503":
+            return jsonify({
+                "error": "This vehicle has been used for a ride and can't be deleted."
+            }), 409
+        current_app.logger.exception("Unable to delete vehicle")
+        return jsonify({"error": "Unable to delete vehicle"}), 400
+
     except Exception:
+        current_app.logger.exception("Unable to delete vehicle")
         return jsonify({"error": "Unable to delete vehicle"}), 400

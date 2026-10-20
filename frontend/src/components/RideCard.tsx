@@ -24,7 +24,7 @@ export function RideCard({ ride, onPress }: RideCardProps) {
     <Pressable
       onPress={onPress}
       accessibilityRole="button"
-      accessibilityLabel={`Ride with ${ride.driverName}, $${ride.price.toFixed(2)}, from ${ride.pickup} to ${ride.destination}, departs ${ride.departureTime}, ${ride.seats} seats, ${ride.durationMinutes} minutes`}
+      accessibilityLabel={`Ride with ${ride.driverName}, $${ride.price.toFixed(2)}, from ${ride.pickup} to ${ride.destination}, departs ${ride.date} at ${ride.departureTime}, ${ride.seats} seats, ${ride.durationMinutes} minutes`}
       style={styles.card}
     >
       <View style={styles.topRow}>
@@ -49,6 +49,10 @@ export function RideCard({ ride, onPress }: RideCardProps) {
       </View>
 
       <View style={styles.metaRow}>
+        <View style={styles.metaItem}>
+          <Ionicons name="calendar-outline" size={14} color={theme.colors.textSecondary} />
+          <Text style={styles.metaText}>{ride.date}</Text>
+        </View>
         <View style={styles.metaItem}>
           <Ionicons name="time-outline" size={14} color={theme.colors.textSecondary} />
           <Text style={styles.metaText}>{ride.departureTime}</Text>

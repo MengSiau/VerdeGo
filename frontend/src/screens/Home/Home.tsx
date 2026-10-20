@@ -3,7 +3,7 @@ import { LinearGradient } from 'expo-linear-gradient';
 import { useRouter } from 'expo-router';
 import { StatusBar } from 'expo-status-bar';
 import { useMemo, useState } from 'react';
-import { ActivityIndicator, RefreshControl, ScrollView, StyleSheet, Text, View } from 'react-native';
+import { ActivityIndicator, Pressable, RefreshControl, ScrollView, StyleSheet, Text, TextInput, View } from 'react-native';
 import { useSafeAreaInsets } from 'react-native-safe-area-context';
 import { BottomNav } from '@/src/components/BottomNav';
 import { FilterChips } from '@/src/components/FilterChips';
@@ -29,6 +29,7 @@ export function Home() {
   const { styles, theme } = useThemedStyles(makeStyles);
   const { rides, loading, error, refresh } = useBrowseRides();
   const [sort, setSort] = useState<SortFilter>('eco');
+  const [query, setQuery] = useState('');
 
   // The backend's GET /api/rides already excludes the caller's own vehicles, so no
   // client-side filtering is needed here (unlike the old local demo data).
@@ -37,8 +38,14 @@ export function Home() {
     [rides]
   );
 
+  const matchingRides = useMemo(() => {
+    const needle = query.trim().toLowerCase();
+    if (!needle) return rides;
+    return rides.filter((ride) => ride.driverName.toLowerCase().includes(needle));
+  }, [rides, query]);
+
   const sortedRides = useMemo(() => {
-    return [...rides].sort((a, b) => {
+    return [...matchingRides].sort((a, b) => {
       switch (sort) {
         case 'eco':
           // Highest estimated CO₂ savings first.
@@ -59,7 +66,7 @@ export function Home() {
           return 0;
       }
     });
-  }, [rides, sort]);
+  }, [matchingRides, sort]);
 
   return (
     <View style={styles.fill}>
@@ -76,7 +83,26 @@ export function Home() {
 
         <View style={styles.searchBar}>
           <Ionicons name="search" size={18} color={theme.colors.muted} />
-          <Text style={styles.searchPlaceholder}>Search pickup location...</Text>
+          <TextInput
+            value={query}
+            onChangeText={setQuery}
+            placeholder="Search driver name..."
+            placeholderTextColor={theme.colors.muted}
+            style={styles.searchInput}
+            returnKeyType="search"
+            autoCorrect={false}
+            accessibilityLabel="Search driver name"
+            maxFontSizeMultiplier={1.3}
+          />
+          {query.length > 0 && (
+            <Pressable
+              onPress={() => setQuery('')}
+              hitSlop={8}
+              accessibilityRole="button"
+              accessibilityLabel="Clear search">
+              <Ionicons name="close-circle" size={18} color={theme.colors.muted} />
+            </Pressable>
+          )}
         </View>
       </LinearGradient>
 
@@ -92,7 +118,8 @@ export function Home() {
             onChange={setSort}
           />
           <Text style={styles.resultsText}>
-            {rides.length} rides available · sorted by {SORT_LABEL[sort]}
+            {sortedRides.length} ride{sortedRides.length === 1 ? '' : 's'}
+            {query ? ' matching your search' : ' available'} · sorted by {SORT_LABEL[sort]}
           </Text>
         </View>
 
@@ -112,6 +139,11 @@ export function Home() {
           <View style={styles.centeredState}>
             <Text style={styles.errorTitle}>No rides available yet</Text>
             <Text style={styles.errorSubtitle}>Check back soon, or be the first to post one.</Text>
+          </View>
+        ) : sortedRides.length === 0 ? (
+          <View style={styles.centeredState}>
+            <Text style={styles.errorTitle}>No rides match "{query}"</Text>
+            <Text style={styles.errorSubtitle}>Try a different driver name.</Text>
           </View>
         ) : (
           <ScrollView
@@ -190,12 +222,12 @@ const makeStyles = (t: Theme) =>
       borderWidth: 1.5,
       borderColor: t.colors.divider,
     },
-    searchPlaceholder: {
+    searchInput: {
       flex: 1,
+      padding: 0,
       fontFamily: fontFamily.bodyRegular,
       fontSize: t.fontSize.sm,
-      lineHeight: t.lineHeight(t.fontSize.sm),
-      color: t.colors.muted,
+      color: t.colors.text,
     },
     body: {
       flex: 1,
