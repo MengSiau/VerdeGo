@@ -33,6 +33,7 @@ def get_vehicles():
                 "vehicle_models(make, model, year, co2_g_per_km)"
             )
             .eq("user_id", user.id)
+            .eq("is_deleted", False)
             .order("created_at", desc=True)
             .execute()
         )
@@ -40,6 +41,7 @@ def get_vehicles():
         return jsonify(response.data), 200
 
     except Exception:
+        current_app.logger.exception("Unable to load vehicles")
         return jsonify({"error": "Unable to load vehicles"}), 500
 
 
@@ -175,6 +177,7 @@ def update_vehicle(vehicle_id):
             .update(vehicle_data)
             .eq("vehicle_id", vehicle_id)
             .eq("user_id", user.id)
+            .eq("is_deleted", False)
             .execute()
         )
 
@@ -198,9 +201,10 @@ def delete_vehicle(vehicle_id):
         response = (
             supabase
             .table("vehicles")
-            .delete()
+            .update({"is_deleted": True})
             .eq("vehicle_id", vehicle_id)
             .eq("user_id", user.id)
+            .eq("is_deleted", False)
             .execute()
         )
 
@@ -210,4 +214,5 @@ def delete_vehicle(vehicle_id):
         return "", 204
 
     except Exception:
-        return jsonify({"error": "Unable to delete vehicle"}), 400
+        current_app.logger.exception("Unable to delete vehicle")
+        return jsonify({"error": "Unable to delete vehicle"}), 500

@@ -89,6 +89,9 @@ CREATE TABLE dev.vehicles (
     FOREIGN KEY (model_id) REFERENCES dev.vehicle_models(model_id)
 );
 
+ALTER TABLE dev.vehicles
+ADD COLUMN is_deleted BOOLEAN NOT NULL DEFAULT FALSE;
+
 
 -- ============================================================
 -- Rides

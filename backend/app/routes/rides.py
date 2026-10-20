@@ -790,6 +790,7 @@ def create_ride():
         .select("vehicle_id")
         .eq("vehicle_id", data["vehicle_id"])
         .eq("user_id", user.id)
+        .eq("is_deleted", False)
         .maybe_single()
         .execute()
     )
